@@ -11,11 +11,12 @@ namespace Editor
         private float _hSliderValue;
         private string _objPath;
         private GameObject _objectToSimplify;
+        private const string _iconPath = "Assets/Plugins/Auto-LOD-Generator/Editor/icon.png";
         
         private void OnEnable()
         {
             _hSliderValue = 0.95f;
-            _icon = (Texture)AssetDatabase.LoadAssetAtPath("Assets/Editor/icon.png", typeof(Texture));
+            _icon = (Texture)AssetDatabase.LoadAssetAtPath(_iconPath, typeof(Texture));
             _objectSelected = false;
             GetWindow(typeof(SimplifiedPopUp));
         }
