@@ -2,7 +2,7 @@ using System;
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace Editor
+namespace Plugins.Auto_LOD_Generator.Editor
 {
     public class MeshSimplify : MonoBehaviour
     {

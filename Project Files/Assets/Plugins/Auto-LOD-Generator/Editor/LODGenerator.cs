@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace Editor
+namespace Plugins.Auto_LOD_Generator.Editor
 {
     public class LODGenerator : MonoBehaviour
     {
