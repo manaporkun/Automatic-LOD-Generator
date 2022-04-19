@@ -91,12 +91,15 @@
         "com.unity.modules.imgui": "1.0.0"
       }
     },
-    "com.whinarn.unitymeshsimplifier": {
-      "version": "https://github.com/Whinarn/UnityMeshSimplifier.git",
+    "com.unity.visualscripting": {
+      "version": "1.7.6",
       "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "e27528b988c22c5f78e366f0c58ec68cc246a455"
+      "source": "registry",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",
