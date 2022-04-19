@@ -1,7 +1,8 @@
+using Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor
+namespace Plugins.Auto_LOD_Generator.Editor
 {
     public class AutoLOD : UnityEditor.Editor
     {
