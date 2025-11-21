@@ -14,8 +14,8 @@ namespace Plugins.AutoLODGenerator.Editor
         #region Constants
 
         private const string WindowTitle = "Auto LOD Generator";
-        private const float MinWindowWidth = 400f;
-        private const float MinWindowHeight = 500f;
+        private const float MinWindowWidth = 420f;
+        private const float MinWindowHeight = 600f;
         private const string IconPath = "Assets/Plugins/Auto-LOD-Generator/Editor/icon.png";
 
         #endregion
@@ -24,7 +24,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         // Tab state
         private int _selectedTab;
-        private readonly string[] _tabNames = { "LOD Group", "Simplify Mesh", "Batch Process" };
+        private readonly string[] _tabNames = { "LOD Group", "Simplify Mesh", "Batch Process", "Presets" };
 
         // Settings
         private LODGeneratorSettings _settings;
@@ -44,10 +44,21 @@ namespace Plugins.AutoLODGenerator.Editor
         private string _processingStatus = "";
         private BatchProcessingResult _lastBatchResult;
 
+        // Mesh saving options
+        private bool _saveMeshesToAssets;
+        private string _meshSavePath = "Assets/GeneratedLODs";
+
+        // Custom presets
+        private string _newPresetName = "";
+        private string[] _customPresetNames = new string[0];
+        private int _selectedCustomPresetIndex = -1;
+        private Vector2 _presetListScrollPos;
+
         // UI State
         private Vector2 _settingsScrollPos;
         private Vector2 _resultsScrollPos;
         private bool _showAdvancedSettings;
+        private bool _showSaveOptions;
         private LODGenerationResult _lastResult;
 
         // Cached textures and styles
@@ -77,6 +88,9 @@ namespace Plugins.AutoLODGenerator.Editor
             // Subscribe to selection changes
             Selection.selectionChanged += OnSelectionChanged;
             OnSelectionChanged();
+
+            // Refresh custom presets list
+            RefreshCustomPresetsList();
         }
 
         private void OnDisable()
@@ -100,6 +114,11 @@ namespace Plugins.AutoLODGenerator.Editor
                 }
                 Repaint();
             }
+        }
+
+        private void RefreshCustomPresetsList()
+        {
+            _customPresetNames = LODGeneratorSettings.GetCustomPresetNames();
         }
 
         #endregion
@@ -127,6 +146,9 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
                 case 2:
                     DrawBatchTab();
+                    break;
+                case 3:
+                    DrawPresetsTab();
                     break;
             }
 
@@ -204,6 +226,11 @@ namespace Plugins.AutoLODGenerator.Editor
 
             EditorGUILayout.Space(10);
 
+            // Save Options
+            DrawSaveOptions();
+
+            EditorGUILayout.Space(10);
+
             // Preview Section
             if (_selectedObjects.Count > 0)
             {
@@ -254,7 +281,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 EditorGUILayout.HelpBox($"{_selectedObjects.Count} objects selected", MessageType.Info);
             }
 
-            // Validation message
+            // Validation message and mesh info
             if (_selectedObjects.Count == 1)
             {
                 if (!LODGeneratorCore.ValidateForLODGeneration(_selectedObjects[0], out string error))
@@ -264,7 +291,10 @@ namespace Plugins.AutoLODGenerator.Editor
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_selectedObjects[0]);
-                    EditorGUILayout.LabelField($"Mesh: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
+                    string rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
+                        ? " (Skinned)"
+                        : " (Static)";
+                    EditorGUILayout.LabelField($"Mesh{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
                 }
             }
 
@@ -388,6 +418,41 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.EndScrollView();
         }
 
+        private void DrawSaveOptions()
+        {
+            _showSaveOptions = EditorGUILayout.Foldout(_showSaveOptions, "Save Options", true);
+
+            if (_showSaveOptions)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+                _saveMeshesToAssets = EditorGUILayout.Toggle("Save Meshes to Assets", _saveMeshesToAssets);
+
+                if (_saveMeshesToAssets)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    _meshSavePath = EditorGUILayout.TextField("Save Path", _meshSavePath);
+                    if (GUILayout.Button("...", GUILayout.Width(30)))
+                    {
+                        string selectedPath = EditorUtility.OpenFolderPanel("Select Save Folder", "Assets", "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            // Convert to relative path
+                            if (selectedPath.StartsWith(Application.dataPath))
+                            {
+                                _meshSavePath = "Assets" + selectedPath.Substring(Application.dataPath.Length);
+                            }
+                        }
+                    }
+                    EditorGUILayout.EndHorizontal();
+
+                    EditorGUILayout.HelpBox("Meshes will be saved as .asset files for reuse.", MessageType.Info);
+                }
+
+                EditorGUILayout.EndVertical();
+            }
+        }
+
         private void DrawLODPreview()
         {
             if (_selectedObjects.Count == 0) return;
@@ -440,7 +505,11 @@ namespace Plugins.AutoLODGenerator.Editor
 
             if (_selectedObjects.Count == 1)
             {
-                _lastResult = LODGeneratorCore.GenerateLODGroup(_selectedObjects[0], _settings);
+                _lastResult = LODGeneratorCore.GenerateLODGroup(
+                    _selectedObjects[0],
+                    _settings,
+                    _saveMeshesToAssets,
+                    _meshSavePath);
 
                 if (_lastResult.Success)
                 {
@@ -479,6 +548,17 @@ namespace Plugins.AutoLODGenerator.Editor
                     EditorGUILayout.LabelField($"LOD{i}: {_lastResult.LODVertexCounts[i]:N0} verts ({reduction:F1}% reduction)");
                 }
 
+                // Show saved paths if any
+                if (_lastResult.SavedMeshPaths != null && _lastResult.SavedMeshPaths.Any(p => !string.IsNullOrEmpty(p)))
+                {
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField("Saved Meshes:", EditorStyles.boldLabel);
+                    foreach (var path in _lastResult.SavedMeshPaths.Where(p => !string.IsNullOrEmpty(p)))
+                    {
+                        EditorGUILayout.LabelField($"  {path}", EditorStyles.miniLabel);
+                    }
+                }
+
                 if (GUILayout.Button("Select Generated LOD Group"))
                 {
                     Selection.activeGameObject = _lastResult.GeneratedLODGroup;
@@ -507,7 +587,7 @@ namespace Plugins.AutoLODGenerator.Editor
             // Object field
             _singleObject = EditorGUILayout.ObjectField("Source Object", _singleObject, typeof(GameObject), true) as GameObject;
 
-            // Validation
+            // Validation and mesh info
             if (_singleObject != null)
             {
                 if (!LODGeneratorCore.ValidateForLODGeneration(_singleObject, out string error))
@@ -517,7 +597,10 @@ namespace Plugins.AutoLODGenerator.Editor
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_singleObject);
-                    EditorGUILayout.LabelField($"Original: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
+                    string rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
+                        ? " (Skinned)"
+                        : " (Static)";
+                    EditorGUILayout.LabelField($"Original{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
                 }
             }
 
@@ -554,12 +637,22 @@ namespace Plugins.AutoLODGenerator.Editor
 
             EditorGUILayout.Space(10);
 
+            // Save options
+            DrawSaveOptions();
+
+            EditorGUILayout.Space(10);
+
             // Simplify button
             GUI.enabled = _singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out _);
 
             if (GUILayout.Button("Simplify Mesh", GUILayout.Height(30)))
             {
-                var result = LODGeneratorCore.GenerateSimplifiedMesh(_singleObject, _simplifyQuality);
+                var result = LODGeneratorCore.GenerateSimplifiedMesh(
+                    _singleObject,
+                    _simplifyQuality,
+                    "_Simplified",
+                    _saveMeshesToAssets,
+                    _meshSavePath);
                 _lastResult = result;
 
                 if (result.Success)
@@ -600,6 +693,13 @@ namespace Plugins.AutoLODGenerator.Editor
 
                 float actualReduction = (1f - ((float)_lastResult.LODVertexCounts[0] / _lastResult.OriginalVertexCount)) * 100f;
                 EditorGUILayout.LabelField($"Actual reduction: {actualReduction:F1}%");
+
+                // Show saved path if any
+                if (_lastResult.SavedMeshPaths != null && _lastResult.SavedMeshPaths.Length > 0 && !string.IsNullOrEmpty(_lastResult.SavedMeshPaths[0]))
+                {
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField($"Saved to: {_lastResult.SavedMeshPaths[0]}", EditorStyles.miniLabel);
+                }
             }
             else
             {
@@ -638,6 +738,12 @@ namespace Plugins.AutoLODGenerator.Editor
                 {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.ObjectField(_selectedObjects[i], typeof(GameObject), true);
+
+                    // Show mesh type
+                    var type = LODGeneratorCore.GetMeshRendererType(_selectedObjects[i]);
+                    string typeLabel = type == MeshRendererType.SkinnedMeshRenderer ? "S" : "M";
+                    GUILayout.Label(typeLabel, GUILayout.Width(20));
+
                     if (GUILayout.Button("X", GUILayout.Width(25)))
                     {
                         _selectedObjects.RemoveAt(i);
@@ -646,6 +752,8 @@ namespace Plugins.AutoLODGenerator.Editor
                 }
 
                 EditorGUILayout.EndScrollView();
+
+                EditorGUILayout.LabelField("S = Skinned, M = Static Mesh", EditorStyles.miniLabel);
             }
 
             // Selection helpers
@@ -673,6 +781,11 @@ namespace Plugins.AutoLODGenerator.Editor
             // Settings (reuse LOD settings)
             DrawSectionHeader("LOD Settings");
             DrawLODSettings();
+
+            EditorGUILayout.Space(10);
+
+            // Save options
+            DrawSaveOptions();
 
             EditorGUILayout.Space(10);
 
@@ -717,7 +830,9 @@ namespace Plugins.AutoLODGenerator.Editor
                     _processingProgress = progress;
                     _processingStatus = status;
                     Repaint();
-                });
+                },
+                _saveMeshesToAssets,
+                _meshSavePath);
 
             _lastBatchResult = result;
             _isProcessing = false;
@@ -759,6 +874,164 @@ namespace Plugins.AutoLODGenerator.Editor
 
                 EditorGUILayout.EndScrollView();
             }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        #endregion
+
+        #region Presets Tab
+
+        private void DrawPresetsTab()
+        {
+            EditorGUILayout.BeginVertical(_boxStyle);
+
+            // Current Settings Section
+            DrawSectionHeader("Current Settings");
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.LabelField($"Preset: {_settings.presetName}");
+            EditorGUILayout.LabelField($"LOD Levels: {_settings.lodLevelCount}");
+            EditorGUILayout.LabelField($"Include Culled: {_settings.includeCulledLevel}");
+
+            EditorGUILayout.Space(5);
+
+            // Quality factors summary
+            string qualityStr = "Quality: ";
+            for (int i = 0; i < _settings.lodLevelCount; i++)
+            {
+                qualityStr += $"LOD{i}={_settings.GetQualityFactor(i):P0} ";
+            }
+            EditorGUILayout.LabelField(qualityStr, EditorStyles.miniLabel);
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Save New Preset Section
+            DrawSectionHeader("Save Current as Preset");
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.BeginHorizontal();
+            _newPresetName = EditorGUILayout.TextField("Preset Name", _newPresetName);
+
+            GUI.enabled = !string.IsNullOrWhiteSpace(_newPresetName);
+            if (GUILayout.Button("Save", GUILayout.Width(60)))
+            {
+                if (_settings.SaveAsPreset(_newPresetName))
+                {
+                    RefreshCustomPresetsList();
+                    _newPresetName = "";
+                }
+            }
+            GUI.enabled = true;
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Load Custom Preset Section
+            DrawSectionHeader("Custom Presets");
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            if (_customPresetNames.Length == 0)
+            {
+                EditorGUILayout.HelpBox("No custom presets saved yet.", MessageType.Info);
+            }
+            else
+            {
+                _presetListScrollPos = EditorGUILayout.BeginScrollView(_presetListScrollPos, GUILayout.MaxHeight(150));
+
+                for (int i = 0; i < _customPresetNames.Length; i++)
+                {
+                    EditorGUILayout.BeginHorizontal();
+
+                    bool isSelected = _selectedCustomPresetIndex == i;
+                    if (GUILayout.Toggle(isSelected, _customPresetNames[i], "Button"))
+                    {
+                        _selectedCustomPresetIndex = i;
+                    }
+
+                    if (GUILayout.Button("Load", GUILayout.Width(50)))
+                    {
+                        if (_settings.LoadPreset(_customPresetNames[i]))
+                        {
+                            _selectedPreset = LODPreset.Custom;
+                        }
+                    }
+
+                    if (GUILayout.Button("X", GUILayout.Width(25)))
+                    {
+                        if (EditorUtility.DisplayDialog("Delete Preset",
+                            $"Are you sure you want to delete the preset '{_customPresetNames[i]}'?",
+                            "Delete", "Cancel"))
+                        {
+                            LODGeneratorSettings.DeletePreset(_customPresetNames[i]);
+                            RefreshCustomPresetsList();
+                            _selectedCustomPresetIndex = -1;
+                        }
+                    }
+
+                    EditorGUILayout.EndHorizontal();
+                }
+
+                EditorGUILayout.EndScrollView();
+            }
+
+            EditorGUILayout.Space(5);
+
+            if (GUILayout.Button("Refresh List"))
+            {
+                RefreshCustomPresetsList();
+            }
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Built-in Presets Quick Access
+            DrawSectionHeader("Built-in Presets");
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Performance"))
+            {
+                _settings.ApplyPreset(LODPreset.Performance);
+                _selectedPreset = LODPreset.Performance;
+            }
+            if (GUILayout.Button("Balanced"))
+            {
+                _settings.ApplyPreset(LODPreset.Balanced);
+                _selectedPreset = LODPreset.Balanced;
+            }
+            if (GUILayout.Button("Quality"))
+            {
+                _settings.ApplyPreset(LODPreset.Quality);
+                _selectedPreset = LODPreset.Quality;
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Mobile Low"))
+            {
+                _settings.ApplyPreset(LODPreset.MobileLowEnd);
+                _selectedPreset = LODPreset.MobileLowEnd;
+            }
+            if (GUILayout.Button("Mobile High"))
+            {
+                _settings.ApplyPreset(LODPreset.MobileHighEnd);
+                _selectedPreset = LODPreset.MobileHighEnd;
+            }
+            if (GUILayout.Button("VR"))
+            {
+                _settings.ApplyPreset(LODPreset.VR);
+                _selectedPreset = LODPreset.VR;
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
 
             EditorGUILayout.EndVertical();
         }
