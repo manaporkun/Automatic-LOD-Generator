@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using UnityEngine;
+using UnityEditor;
 
 namespace Plugins.AutoLODGenerator.Editor
 {
@@ -9,6 +11,11 @@ namespace Plugins.AutoLODGenerator.Editor
     [Serializable]
     public class LODGeneratorSettings
     {
+        /// <summary>
+        /// Name of this preset (for custom presets).
+        /// </summary>
+        public string presetName = "Custom";
+
         /// <summary>
         /// Number of LOD levels to generate (including LOD0).
         /// </summary>
@@ -39,6 +46,8 @@ namespace Plugins.AutoLODGenerator.Editor
         public const int MinLODLevels = 2;
         public const int MaxLODLevels = 6;
 
+        private const string CustomPresetsFolder = "Assets/Plugins/Auto-LOD-Generator/Editor/Presets";
+
         /// <summary>
         /// Creates settings with default values.
         /// </summary>
@@ -55,6 +64,7 @@ namespace Plugins.AutoLODGenerator.Editor
             switch (preset)
             {
                 case LODPreset.Performance:
+                    presetName = "Performance";
                     lodLevelCount = 3;
                     qualityFactors = new[] { 1.0f, 0.4f, 0.15f, 0.1f, 0.05f, 0.02f };
                     screenTransitionHeights = new[] { 0.5f, 0.2f, 0.05f, 0.02f, 0.01f, 0.005f };
@@ -63,6 +73,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
 
                 case LODPreset.Balanced:
+                    presetName = "Balanced";
                     lodLevelCount = 4;
                     qualityFactors = new[] { 1.0f, 0.65f, 0.4f, 0.2f, 0.1f, 0.05f };
                     screenTransitionHeights = new[] { 0.5f, 0.3f, 0.15f, 0.05f, 0.02f, 0.01f };
@@ -71,6 +82,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
 
                 case LODPreset.Quality:
+                    presetName = "Quality";
                     lodLevelCount = 5;
                     qualityFactors = new[] { 1.0f, 0.8f, 0.6f, 0.4f, 0.2f, 0.1f };
                     screenTransitionHeights = new[] { 0.6f, 0.4f, 0.25f, 0.12f, 0.05f, 0.02f };
@@ -79,6 +91,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
 
                 case LODPreset.MobileLowEnd:
+                    presetName = "Mobile (Low-end)";
                     lodLevelCount = 2;
                     qualityFactors = new[] { 1.0f, 0.25f, 0.1f, 0.05f, 0.02f, 0.01f };
                     screenTransitionHeights = new[] { 0.4f, 0.1f, 0.05f, 0.02f, 0.01f, 0.005f };
@@ -87,6 +100,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
 
                 case LODPreset.MobileHighEnd:
+                    presetName = "Mobile (High-end)";
                     lodLevelCount = 3;
                     qualityFactors = new[] { 1.0f, 0.5f, 0.25f, 0.1f, 0.05f, 0.02f };
                     screenTransitionHeights = new[] { 0.5f, 0.25f, 0.08f, 0.03f, 0.01f, 0.005f };
@@ -95,6 +109,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
 
                 case LODPreset.VR:
+                    presetName = "VR";
                     lodLevelCount = 4;
                     qualityFactors = new[] { 1.0f, 0.75f, 0.5f, 0.3f, 0.15f, 0.08f };
                     screenTransitionHeights = new[] { 0.7f, 0.5f, 0.3f, 0.15f, 0.08f, 0.03f };
@@ -149,6 +164,160 @@ namespace Plugins.AutoLODGenerator.Editor
 
             culledTransitionHeight = Mathf.Clamp01(culledTransitionHeight);
         }
+
+        #region Preset Save/Load
+
+        /// <summary>
+        /// Saves the current settings as a custom preset.
+        /// </summary>
+        /// <param name="name">Name for the preset.</param>
+        /// <returns>True if saved successfully.</returns>
+        public bool SaveAsPreset(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                Debug.LogError("[Auto LOD] Preset name cannot be empty.");
+                return false;
+            }
+
+            try
+            {
+                // Ensure directory exists
+                if (!Directory.Exists(CustomPresetsFolder))
+                {
+                    Directory.CreateDirectory(CustomPresetsFolder);
+                }
+
+                presetName = name;
+                string json = JsonUtility.ToJson(this, true);
+                string filePath = GetPresetPath(name);
+
+                File.WriteAllText(filePath, json);
+                AssetDatabase.Refresh();
+
+                Debug.Log($"[Auto LOD] Preset '{name}' saved successfully.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Auto LOD] Failed to save preset: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Loads a custom preset by name.
+        /// </summary>
+        /// <param name="name">Name of the preset to load.</param>
+        /// <returns>True if loaded successfully.</returns>
+        public bool LoadPreset(string name)
+        {
+            try
+            {
+                string filePath = GetPresetPath(name);
+
+                if (!File.Exists(filePath))
+                {
+                    Debug.LogError($"[Auto LOD] Preset '{name}' not found.");
+                    return false;
+                }
+
+                string json = File.ReadAllText(filePath);
+                JsonUtility.FromJsonOverwrite(json, this);
+
+                Debug.Log($"[Auto LOD] Preset '{name}' loaded successfully.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Auto LOD] Failed to load preset: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Deletes a custom preset.
+        /// </summary>
+        /// <param name="name">Name of the preset to delete.</param>
+        /// <returns>True if deleted successfully.</returns>
+        public static bool DeletePreset(string name)
+        {
+            try
+            {
+                string filePath = GetPresetPath(name);
+
+                if (!File.Exists(filePath))
+                {
+                    Debug.LogError($"[Auto LOD] Preset '{name}' not found.");
+                    return false;
+                }
+
+                File.Delete(filePath);
+
+                // Also delete meta file if exists
+                string metaPath = filePath + ".meta";
+                if (File.Exists(metaPath))
+                {
+                    File.Delete(metaPath);
+                }
+
+                AssetDatabase.Refresh();
+
+                Debug.Log($"[Auto LOD] Preset '{name}' deleted successfully.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Auto LOD] Failed to delete preset: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets all available custom preset names.
+        /// </summary>
+        /// <returns>Array of preset names.</returns>
+        public static string[] GetCustomPresetNames()
+        {
+            if (!Directory.Exists(CustomPresetsFolder))
+            {
+                return new string[0];
+            }
+
+            var files = Directory.GetFiles(CustomPresetsFolder, "*.json");
+            var names = new string[files.Length];
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                names[i] = Path.GetFileNameWithoutExtension(files[i]);
+            }
+
+            return names;
+        }
+
+        /// <summary>
+        /// Creates a deep copy of this settings object.
+        /// </summary>
+        /// <returns>A new LODGeneratorSettings instance with the same values.</returns>
+        public LODGeneratorSettings Clone()
+        {
+            string json = JsonUtility.ToJson(this);
+            var clone = new LODGeneratorSettings();
+            JsonUtility.FromJsonOverwrite(json, clone);
+            return clone;
+        }
+
+        private static string GetPresetPath(string name)
+        {
+            // Sanitize filename
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            return Path.Combine(CustomPresetsFolder, $"{name}.json");
+        }
+
+        #endregion
     }
 
     /// <summary>
@@ -191,6 +360,8 @@ namespace Plugins.AutoLODGenerator.Editor
         public int[] LODVertexCounts { get; set; }
         public int OriginalTriangleCount { get; set; }
         public int[] LODTriangleCounts { get; set; }
+        public Mesh[] GeneratedMeshes { get; set; }
+        public string[] SavedMeshPaths { get; set; }
 
         public float GetTotalReduction()
         {
@@ -214,5 +385,15 @@ namespace Plugins.AutoLODGenerator.Editor
         public float ProcessingTimeSeconds { get; set; }
 
         public bool AllSucceeded => FailureCount == 0;
+    }
+
+    /// <summary>
+    /// Type of mesh renderer on a GameObject.
+    /// </summary>
+    public enum MeshRendererType
+    {
+        None,
+        MeshRenderer,
+        SkinnedMeshRenderer
     }
 }
