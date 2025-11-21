@@ -11,15 +11,24 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
 
 ## Features
 
+### Core Features
 - **One-Click LOD Generation** - Automatically create LOD groups with configurable quality levels
 - **Batch Processing** - Process multiple objects at once for efficient workflow
 - **6 Built-in Presets** - Pre-configured settings for different platforms and use cases
 - **Customizable LOD Levels** - Configure 2-6 LOD levels with individual quality settings
 - **Real-time Preview** - See estimated vertex/triangle counts before generation
+
+### Mesh Support
+- **Static Meshes** - Full support for MeshFilter + MeshRenderer objects
+- **Skinned Meshes** - Full support for SkinnedMeshRenderer (animated characters)
+- **Save to Assets** - Export generated meshes as reusable .asset files
+
+### Workflow
 - **Drag & Drop Support** - Simply drag objects from hierarchy or project window
 - **Context Menu Integration** - Right-click on objects for quick access
-- **Keyboard Shortcuts** - Speed up your workflow with hotkeys
+- **Keyboard Shortcuts** - Speed up your workflow with hotkeys (Ctrl+Alt+L)
 - **Undo Support** - Full integration with Unity's undo system
+- **Custom Presets** - Save and load your own preset configurations
 
 ## Installation
 
@@ -71,6 +80,17 @@ This plugin requires [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshS
 | **Mobile (High-end)** | 3 | Modern mobile devices |
 | **VR** | 4 | VR applications, avoids LOD popping |
 
+### Custom Presets
+
+You can save your own custom presets:
+
+1. Open the main window
+2. Go to the **Presets** tab
+3. Configure your settings
+4. Enter a name and click **Save**
+
+Custom presets are stored in `Assets/Plugins/Auto-LOD-Generator/Editor/Presets/`.
+
 ## Menu Reference
 
 ### Tools Menu
@@ -85,7 +105,27 @@ This plugin requires [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshS
 - `Auto LOD > Simplify Mesh (25%)` - Create 25% simplified version
 - `Auto LOD > Open Generator Window...` - Open main window
 
-## Advanced Configuration
+## Advanced Features
+
+### Save Meshes to Assets
+
+Enable **Save Meshes to Assets** in the Save Options section to:
+- Export generated LOD meshes as .asset files
+- Reuse meshes across multiple prefabs
+- Reduce scene file size
+- Default save location: `Assets/GeneratedLODs/`
+
+### Skinned Mesh Support
+
+The plugin automatically detects and handles:
+- **Static meshes** (MeshFilter + MeshRenderer)
+- **Skinned meshes** (SkinnedMeshRenderer)
+
+For skinned meshes, the plugin preserves:
+- Bone references
+- Root bone assignment
+- Blend shapes (if applicable)
+- Animation quality settings
 
 ### Custom LOD Settings
 
@@ -100,7 +140,8 @@ In the main window, expand **Advanced Settings** to customize:
 1. Open the main window and go to the **Batch Process** tab
 2. Drag multiple objects or click **Add from Selection**
 3. Configure settings
-4. Click **Process X Objects**
+4. Enable **Save Meshes to Assets** if needed
+5. Click **Process X Objects**
 
 ## API Usage
 
@@ -121,15 +162,40 @@ if (result.Success)
     Debug.Log($"Original vertices: {result.OriginalVertexCount}");
 }
 
+// Generate with mesh saving
+var resultWithSave = LODGeneratorCore.GenerateLODGroup(
+    myGameObject,
+    settings,
+    saveMeshesToAssets: true,
+    meshSavePath: "Assets/MyLODs");
+
 // Simplify a single mesh
-var simplifyResult = LODGeneratorCore.GenerateSimplifiedMesh(myGameObject, 0.5f);
+var simplifyResult = LODGeneratorCore.GenerateSimplifiedMesh(
+    myGameObject,
+    quality: 0.5f,
+    saveMeshToAssets: true);
 
 // Batch processing
 var batchResult = LODGeneratorCore.ProcessBatch(
     gameObjectArray,
     settings,
-    (progress, status) => Debug.Log($"{progress:P0} - {status}")
+    progressCallback: (progress, status) => Debug.Log($"{progress:P0} - {status}"),
+    saveMeshesToAssets: true
 );
+
+// Save/Load custom presets
+settings.SaveAsPreset("MyCustomPreset");
+settings.LoadPreset("MyCustomPreset");
+
+// Get available custom presets
+string[] presets = LODGeneratorSettings.GetCustomPresetNames();
+
+// Check mesh renderer type
+var type = LODGeneratorCore.GetMeshRendererType(gameObject);
+if (type == MeshRendererType.SkinnedMeshRenderer)
+{
+    Debug.Log("This is a skinned mesh!");
+}
 ```
 
 ## Requirements
@@ -139,8 +205,10 @@ var batchResult = LODGeneratorCore.ProcessBatch(
 
 ## Troubleshooting
 
-**"Object does not have a valid MeshFilter"**
-- Ensure the selected object has both `MeshFilter` and `MeshRenderer` components
+**"Object does not have a valid mesh"**
+- Ensure the selected object has either:
+  - `MeshFilter` + `MeshRenderer` components, OR
+  - `SkinnedMeshRenderer` component
 
 **LOD transitions are too aggressive/subtle**
 - Adjust Screen Transition Heights in Advanced Settings
@@ -150,9 +218,24 @@ var batchResult = LODGeneratorCore.ProcessBatch(
 - Increase the quality factor
 - Some mesh topologies don't simplify well - try a higher quality setting
 
+**Skinned mesh animations break after LOD generation**
+- Ensure the original skeleton hierarchy is preserved
+- Check that bone references are correctly assigned
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting issues or pull requests.
+
+### Development Setup
+1. Clone the repository
+2. Open the `Project Files` folder in Unity 2021.3+
+3. Install the UnityMeshSimplifier package
+4. Make your changes
+5. Submit a pull request
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ## License
 
