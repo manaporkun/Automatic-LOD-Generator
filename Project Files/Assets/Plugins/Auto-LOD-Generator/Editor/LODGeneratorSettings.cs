@@ -152,12 +152,12 @@ namespace Plugins.AutoLODGenerator.Editor
         {
             lodLevelCount = Mathf.Clamp(lodLevelCount, MinLODLevels, MaxLODLevels);
 
-            for (int i = 0; i < qualityFactors.Length; i++)
+            for (var i = 0; i < qualityFactors.Length; i++)
             {
                 qualityFactors[i] = Mathf.Clamp01(qualityFactors[i]);
             }
 
-            for (int i = 0; i < screenTransitionHeights.Length; i++)
+            for (var i = 0; i < screenTransitionHeights.Length; i++)
             {
                 screenTransitionHeights[i] = Mathf.Clamp01(screenTransitionHeights[i]);
             }
@@ -189,8 +189,8 @@ namespace Plugins.AutoLODGenerator.Editor
                 }
 
                 presetName = name;
-                string json = JsonUtility.ToJson(this, true);
-                string filePath = GetPresetPath(name);
+                var json = JsonUtility.ToJson(this, true);
+                var filePath = GetPresetPath(name);
 
                 File.WriteAllText(filePath, json);
                 AssetDatabase.Refresh();
@@ -214,7 +214,7 @@ namespace Plugins.AutoLODGenerator.Editor
         {
             try
             {
-                string filePath = GetPresetPath(name);
+                var filePath = GetPresetPath(name);
 
                 if (!File.Exists(filePath))
                 {
@@ -222,7 +222,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     return false;
                 }
 
-                string json = File.ReadAllText(filePath);
+                var json = File.ReadAllText(filePath);
                 JsonUtility.FromJsonOverwrite(json, this);
 
                 Debug.Log($"[Auto LOD] Preset '{name}' loaded successfully.");
@@ -244,7 +244,7 @@ namespace Plugins.AutoLODGenerator.Editor
         {
             try
             {
-                string filePath = GetPresetPath(name);
+                var filePath = GetPresetPath(name);
 
                 if (!File.Exists(filePath))
                 {
@@ -255,7 +255,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 File.Delete(filePath);
 
                 // Also delete meta file if exists
-                string metaPath = filePath + ".meta";
+                var metaPath = filePath + ".meta";
                 if (File.Exists(metaPath))
                 {
                     File.Delete(metaPath);
@@ -287,7 +287,7 @@ namespace Plugins.AutoLODGenerator.Editor
             var files = Directory.GetFiles(CustomPresetsFolder, "*.json");
             var names = new string[files.Length];
 
-            for (int i = 0; i < files.Length; i++)
+            for (var i = 0; i < files.Length; i++)
             {
                 names[i] = Path.GetFileNameWithoutExtension(files[i]);
             }
@@ -301,7 +301,7 @@ namespace Plugins.AutoLODGenerator.Editor
         /// <returns>A new LODGeneratorSettings instance with the same values.</returns>
         public LODGeneratorSettings Clone()
         {
-            string json = JsonUtility.ToJson(this);
+            var json = JsonUtility.ToJson(this);
             var clone = new LODGeneratorSettings();
             JsonUtility.FromJsonOverwrite(json, clone);
             return clone;
@@ -310,7 +310,7 @@ namespace Plugins.AutoLODGenerator.Editor
         private static string GetPresetPath(string name)
         {
             // Sanitize filename
-            foreach (char c in Path.GetInvalidFileNameChars())
+            foreach (var c in Path.GetInvalidFileNameChars())
             {
                 name = name.Replace(c, '_');
             }
@@ -368,7 +368,7 @@ namespace Plugins.AutoLODGenerator.Editor
             if (LODVertexCounts == null || LODVertexCounts.Length == 0 || OriginalVertexCount == 0)
                 return 0f;
 
-            int lowestLODVerts = LODVertexCounts[LODVertexCounts.Length - 1];
+            var lowestLODVerts = LODVertexCounts[LODVertexCounts.Length - 1];
             return 1f - ((float)lowestLODVerts / OriginalVertexCount);
         }
     }
