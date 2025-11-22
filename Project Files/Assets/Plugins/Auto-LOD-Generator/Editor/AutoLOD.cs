@@ -42,8 +42,8 @@ namespace Plugins.AutoLODGenerator.Editor
             var settings = new LODGeneratorSettings();
             settings.ApplyPreset(LODPreset.Balanced);
 
-            int successCount = 0;
-            int failCount = 0;
+            var successCount = 0;
+            var failCount = 0;
 
             foreach (var obj in selectedObjects)
             {
@@ -238,7 +238,7 @@ namespace Plugins.AutoLODGenerator.Editor
             var settings = new LODGeneratorSettings();
             settings.ApplyPreset(preset);
 
-            int successCount = 0;
+            var successCount = 0;
 
             foreach (var obj in selectedObjects)
             {

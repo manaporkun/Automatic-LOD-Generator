@@ -284,14 +284,14 @@ namespace Plugins.AutoLODGenerator.Editor
             // Validation message and mesh info
             if (_selectedObjects.Count == 1)
             {
-                if (!LODGeneratorCore.ValidateForLODGeneration(_selectedObjects[0], out string error))
+                if (!LODGeneratorCore.ValidateForLODGeneration(_selectedObjects[0], out var error))
                 {
                     EditorGUILayout.HelpBox(error, MessageType.Warning);
                 }
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_selectedObjects[0]);
-                    string rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
+                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
                         ? " (Skinned)"
                         : " (Static)";
                     EditorGUILayout.LabelField($"Mesh{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
@@ -379,7 +379,7 @@ namespace Plugins.AutoLODGenerator.Editor
             _settingsScrollPos = EditorGUILayout.BeginScrollView(_settingsScrollPos, GUILayout.MaxHeight(200));
 
             EditorGUILayout.LabelField("Quality Factors", EditorStyles.boldLabel);
-            for (int i = 1; i < _settings.lodLevelCount; i++)
+            for (var i = 1; i < _settings.lodLevelCount; i++)
             {
                 EditorGUI.BeginChangeCheck();
                 _settings.qualityFactors[i] = EditorGUILayout.Slider($"LOD{i} Quality",
@@ -393,7 +393,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.Space(5);
 
             EditorGUILayout.LabelField("Screen Transition Heights", EditorStyles.boldLabel);
-            for (int i = 0; i < _settings.lodLevelCount; i++)
+            for (var i = 0; i < _settings.lodLevelCount; i++)
             {
                 EditorGUI.BeginChangeCheck();
                 _settings.screenTransitionHeights[i] = EditorGUILayout.Slider($"LOD{i} Transition",
@@ -434,7 +434,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     _meshSavePath = EditorGUILayout.TextField("Save Path", _meshSavePath);
                     if (GUILayout.Button("...", GUILayout.Width(30)))
                     {
-                        string selectedPath = EditorUtility.OpenFolderPanel("Select Save Folder", "Assets", "");
+                        var selectedPath = EditorUtility.OpenFolderPanel("Select Save Folder", "Assets", "");
                         if (!string.IsNullOrEmpty(selectedPath))
                         {
                             // Convert to relative path
@@ -465,14 +465,14 @@ namespace Plugins.AutoLODGenerator.Editor
 
             EditorGUILayout.LabelField("Estimated LOD Statistics:", EditorStyles.boldLabel);
 
-            for (int i = 0; i < _settings.lodLevelCount; i++)
+            for (var i = 0; i < _settings.lodLevelCount; i++)
             {
-                float quality = _settings.GetQualityFactor(i);
-                int estimatedVerts = LODGeneratorCore.EstimateVertexCount(stats.vertices, quality);
-                int estimatedTris = LODGeneratorCore.EstimateVertexCount(stats.triangles, quality);
-                float reduction = (1f - quality) * 100f;
+                var quality = _settings.GetQualityFactor(i);
+                var estimatedVerts = LODGeneratorCore.EstimateVertexCount(stats.vertices, quality);
+                var estimatedTris = LODGeneratorCore.EstimateVertexCount(stats.triangles, quality);
+                var reduction = (1f - quality) * 100f;
 
-                string label = i == 0
+                var label = i == 0
                     ? $"LOD{i}: {estimatedVerts:N0} verts, {estimatedTris:N0} tris (Original)"
                     : $"LOD{i}: ~{estimatedVerts:N0} verts, ~{estimatedTris:N0} tris ({reduction:F0}% reduction)";
 
@@ -542,9 +542,9 @@ namespace Plugins.AutoLODGenerator.Editor
                 EditorGUILayout.LabelField("Statistics:", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField($"Original: {_lastResult.OriginalVertexCount:N0} vertices, {_lastResult.OriginalTriangleCount:N0} triangles");
 
-                for (int i = 0; i < _lastResult.LODVertexCounts.Length; i++)
+                for (var i = 0; i < _lastResult.LODVertexCounts.Length; i++)
                 {
-                    float reduction = (1f - ((float)_lastResult.LODVertexCounts[i] / _lastResult.OriginalVertexCount)) * 100f;
+                    var reduction = (1f - ((float)_lastResult.LODVertexCounts[i] / _lastResult.OriginalVertexCount)) * 100f;
                     EditorGUILayout.LabelField($"LOD{i}: {_lastResult.LODVertexCounts[i]:N0} verts ({reduction:F1}% reduction)");
                 }
 
@@ -590,14 +590,14 @@ namespace Plugins.AutoLODGenerator.Editor
             // Validation and mesh info
             if (_singleObject != null)
             {
-                if (!LODGeneratorCore.ValidateForLODGeneration(_singleObject, out string error))
+                if (!LODGeneratorCore.ValidateForLODGeneration(_singleObject, out var error))
                 {
                     EditorGUILayout.HelpBox(error, MessageType.Warning);
                 }
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_singleObject);
-                    string rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
+                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
                         ? " (Skinned)"
                         : " (Static)";
                     EditorGUILayout.LabelField($"Original{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
@@ -625,9 +625,9 @@ namespace Plugins.AutoLODGenerator.Editor
             if (_singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out _))
             {
                 var stats = LODGeneratorCore.GetMeshStatistics(_singleObject);
-                int estimatedVerts = LODGeneratorCore.EstimateVertexCount(stats.vertices, _simplifyQuality);
-                int estimatedTris = LODGeneratorCore.EstimateVertexCount(stats.triangles, _simplifyQuality);
-                float reduction = (1f - _simplifyQuality) * 100f;
+                var estimatedVerts = LODGeneratorCore.EstimateVertexCount(stats.vertices, _simplifyQuality);
+                var estimatedTris = LODGeneratorCore.EstimateVertexCount(stats.triangles, _simplifyQuality);
+                var reduction = (1f - _simplifyQuality) * 100f;
 
                 EditorGUILayout.Space(5);
                 EditorGUILayout.LabelField($"Estimated result: ~{estimatedVerts:N0} verts, ~{estimatedTris:N0} tris ({reduction:F0}% reduction)");
@@ -691,7 +691,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 EditorGUILayout.LabelField($"Original: {_lastResult.OriginalVertexCount:N0} vertices");
                 EditorGUILayout.LabelField($"Simplified: {_lastResult.LODVertexCounts[0]:N0} vertices");
 
-                float actualReduction = (1f - ((float)_lastResult.LODVertexCounts[0] / _lastResult.OriginalVertexCount)) * 100f;
+                var actualReduction = (1f - ((float)_lastResult.LODVertexCounts[0] / _lastResult.OriginalVertexCount)) * 100f;
                 EditorGUILayout.LabelField($"Actual reduction: {actualReduction:F1}%");
 
                 // Show saved path if any
@@ -734,14 +734,14 @@ namespace Plugins.AutoLODGenerator.Editor
             {
                 _objectListScrollPos = EditorGUILayout.BeginScrollView(_objectListScrollPos, GUILayout.MaxHeight(150));
 
-                for (int i = _selectedObjects.Count - 1; i >= 0; i--)
+                for (var i = _selectedObjects.Count - 1; i >= 0; i--)
                 {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.ObjectField(_selectedObjects[i], typeof(GameObject), true);
 
                     // Show mesh type
                     var type = LODGeneratorCore.GetMeshRendererType(_selectedObjects[i]);
-                    string typeLabel = type == MeshRendererType.SkinnedMeshRenderer ? "S" : "M";
+                    var typeLabel = type == MeshRendererType.SkinnedMeshRenderer ? "S" : "M";
                     GUILayout.Label(typeLabel, GUILayout.Width(20));
 
                     if (GUILayout.Button("X", GUILayout.Width(25)))
@@ -897,8 +897,8 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.Space(5);
 
             // Quality factors summary
-            string qualityStr = "Quality: ";
-            for (int i = 0; i < _settings.lodLevelCount; i++)
+            var qualityStr = "Quality: ";
+            for (var i = 0; i < _settings.lodLevelCount; i++)
             {
                 qualityStr += $"LOD{i}={_settings.GetQualityFactor(i):P0} ";
             }
@@ -944,11 +944,11 @@ namespace Plugins.AutoLODGenerator.Editor
             {
                 _presetListScrollPos = EditorGUILayout.BeginScrollView(_presetListScrollPos, GUILayout.MaxHeight(150));
 
-                for (int i = 0; i < _customPresetNames.Length; i++)
+                for (var i = 0; i < _customPresetNames.Length; i++)
                 {
                     EditorGUILayout.BeginHorizontal();
 
-                    bool isSelected = _selectedCustomPresetIndex == i;
+                    var isSelected = _selectedCustomPresetIndex == i;
                     if (GUILayout.Toggle(isSelected, _customPresetNames[i], "Button"))
                     {
                         _selectedCustomPresetIndex = i;
