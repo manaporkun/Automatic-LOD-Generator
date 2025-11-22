@@ -62,7 +62,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 // Get mesh and materials based on renderer type
                 Mesh originalMesh;
                 Material[] originalMaterials;
-                Transform originalTransform = sourceObject.transform;
+                var originalTransform = sourceObject.transform;
 
                 if (rendererType == MeshRendererType.SkinnedMeshRenderer)
                 {
@@ -102,22 +102,27 @@ namespace Plugins.AutoLODGenerator.Editor
                 }
 
                 // Create parent LOD group object
-                var lodGroupObject = new GameObject($"{sourceObject.name}_LODGroup");
-                lodGroupObject.transform.position = originalTransform.position;
-                lodGroupObject.transform.rotation = originalTransform.rotation;
-                lodGroupObject.transform.localScale = Vector3.one;
+                var lodGroupObject = new GameObject($"{sourceObject.name}_LODGroup")
+                {
+                    transform =
+                    {
+                        position = originalTransform.position,
+                        rotation = originalTransform.rotation,
+                        localScale = Vector3.one
+                    }
+                };
 
                 var lodGroup = lodGroupObject.AddComponent<LODGroup>();
 
                 // Determine total LOD count (including optional culled level)
-                int totalLODCount = settings.includeCulledLevel ? settings.lodLevelCount + 1 : settings.lodLevelCount;
+                var totalLODCount = settings.includeCulledLevel ? settings.lodLevelCount + 1 : settings.lodLevelCount;
                 var lods = new LOD[totalLODCount];
 
                 // Generate each LOD level
-                for (int i = 0; i < settings.lodLevelCount; i++)
+                for (var i = 0; i < settings.lodLevelCount; i++)
                 {
-                    float quality = settings.GetQualityFactor(i);
-                    float screenHeight = settings.GetScreenTransitionHeight(i);
+                    var quality = settings.GetQualityFactor(i);
+                    var screenHeight = settings.GetScreenTransitionHeight(i);
 
                     Mesh lodMesh;
                     if (i == 0)
@@ -139,7 +144,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     // Save mesh to assets if requested
                     if (saveMeshesToAssets && i > 0)
                     {
-                        string savedPath = SaveMeshAsset(lodMesh, meshSavePath, $"{sourceObject.name}_LOD{i}");
+                        var savedPath = SaveMeshAsset(lodMesh, meshSavePath, $"{sourceObject.name}_LOD{i}");
                         result.SavedMeshPaths[i] = savedPath;
 
                         // Reload the saved mesh
@@ -176,13 +181,13 @@ namespace Plugins.AutoLODGenerator.Editor
                         lodRenderer = lodObject.GetComponent<MeshRenderer>();
                     }
 
-                    lods[i] = new LOD(screenHeight, new Renderer[] { lodRenderer });
+                    lods[i] = new LOD(screenHeight, new[] { lodRenderer });
                 }
 
                 // Add culled level if enabled
                 if (settings.includeCulledLevel)
                 {
-                    lods[settings.lodLevelCount] = new LOD(settings.culledTransitionHeight, new Renderer[0]);
+                    lods[settings.lodLevelCount] = new LOD(settings.culledTransitionHeight, Array.Empty<Renderer>());
                 }
 
                 lodGroup.SetLODs(lods);
@@ -319,7 +324,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 // Get mesh and materials based on renderer type
                 Mesh originalMesh;
                 Material[] originalMaterials;
-                Transform originalTransform = sourceObject.transform;
+                var originalTransform = sourceObject.transform;
 
                 if (rendererType == MeshRendererType.SkinnedMeshRenderer)
                 {
@@ -361,7 +366,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     }
                     EnsureDirectoryExists(meshSavePath);
 
-                    string savedPath = SaveMeshAsset(simplifiedMesh, meshSavePath, $"{sourceObject.name}{suffix}");
+                    var savedPath = SaveMeshAsset(simplifiedMesh, meshSavePath, $"{sourceObject.name}{suffix}");
                     result.SavedMeshPaths = new[] { savedPath };
 
                     // Reload the saved mesh
@@ -372,10 +377,15 @@ namespace Plugins.AutoLODGenerator.Editor
                 }
 
                 // Create simplified GameObject
-                var simplifiedObject = new GameObject($"{sourceObject.name}{suffix}");
-                simplifiedObject.transform.position = originalTransform.position;
-                simplifiedObject.transform.rotation = originalTransform.rotation;
-                simplifiedObject.transform.localScale = originalTransform.localScale;
+                var simplifiedObject = new GameObject($"{sourceObject.name}{suffix}")
+                {
+                    transform =
+                    {
+                        position = originalTransform.position,
+                        rotation = originalTransform.rotation,
+                        localScale = originalTransform.localScale
+                    }
+                };
 
                 if (rendererType == MeshRendererType.SkinnedMeshRenderer)
                 {
@@ -464,13 +474,13 @@ namespace Plugins.AutoLODGenerator.Editor
         {
             var stopwatch = Stopwatch.StartNew();
             var results = new List<LODGenerationResult>();
-            int successCount = 0;
-            int failureCount = 0;
+            var successCount = 0;
+            var failureCount = 0;
 
-            for (int i = 0; i < sourceObjects.Length; i++)
+            for (var i = 0; i < sourceObjects.Length; i++)
             {
                 var obj = sourceObjects[i];
-                float progress = (float)i / sourceObjects.Length;
+                var progress = (float)i / sourceObjects.Length;
                 progressCallback?.Invoke(progress, $"Processing {obj.name}... ({i + 1}/{sourceObjects.Length})");
 
                 var result = GenerateLODGroup(obj, settings, saveMeshesToAssets, meshSavePath);
@@ -519,18 +529,18 @@ namespace Plugins.AutoLODGenerator.Editor
                 EnsureDirectoryExists(folderPath);
 
                 // Sanitize mesh name
-                foreach (char c in Path.GetInvalidFileNameChars())
+                foreach (var c in Path.GetInvalidFileNameChars())
                 {
                     meshName = meshName.Replace(c, '_');
                 }
 
-                string assetPath = $"{folderPath}/{meshName}.asset";
+                var assetPath = $"{folderPath}/{meshName}.asset";
 
                 // Handle duplicates
                 assetPath = AssetDatabase.GenerateUniqueAssetPath(assetPath);
 
                 // Create a copy of the mesh to save
-                Mesh meshToSave = Object.Instantiate(mesh);
+                var meshToSave = Object.Instantiate(mesh);
                 meshToSave.name = meshName;
 
                 AssetDatabase.CreateAsset(meshToSave, assetPath);
@@ -557,7 +567,7 @@ namespace Plugins.AutoLODGenerator.Editor
             if (result == null || result.GeneratedMeshes == null)
             {
                 Debug.LogError("[Auto LOD] Invalid result or no meshes to save.");
-                return new string[0];
+                return Array.Empty<string>();
             }
 
             if (string.IsNullOrEmpty(folderPath))
@@ -566,14 +576,14 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             var paths = new List<string>();
-            string baseName = result.SourceObject != null ? result.SourceObject.name : "Mesh";
+            var baseName = result.SourceObject != null ? result.SourceObject.name : "Mesh";
 
-            for (int i = 0; i < result.GeneratedMeshes.Length; i++)
+            for (var i = 0; i < result.GeneratedMeshes.Length; i++)
             {
                 var mesh = result.GeneratedMeshes[i];
                 if (mesh != null && i > 0) // Skip LOD0 as it's the original mesh
                 {
-                    string path = SaveMeshAsset(mesh, folderPath, $"{baseName}_LOD{i}");
+                    var path = SaveMeshAsset(mesh, folderPath, $"{baseName}_LOD{i}");
                     if (!string.IsNullOrEmpty(path))
                     {
                         paths.Add(path);
@@ -688,19 +698,9 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
             }
 
-            if (mesh == null)
-                return (-1, -1, MeshRendererType.None);
-
-            return (mesh.vertexCount, mesh.triangles.Length / 3, rendererType);
-        }
-
-        /// <summary>
-        /// Gets mesh statistics for a GameObject (legacy overload for compatibility).
-        /// </summary>
-        public static (int vertices, int triangles) GetMeshStatistics(GameObject gameObject, bool legacy = true)
-        {
-            var stats = GetMeshStatistics(gameObject);
-            return (stats.vertices, stats.triangles);
+            return mesh == null 
+                ? (-1, -1, MeshRendererType.None) 
+                : (mesh.vertexCount, mesh.triangles.Length / 3, rendererType);
         }
 
         #endregion
