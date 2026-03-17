@@ -245,7 +245,3 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 ## Credits
 
 - Built on [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) by Mattias Edlund
-
-## Video Tutorial
-
-[![Auto LOD Generator Tutorial](https://img.youtube.com/vi/9YOd-lwKeXU/maxresdefault.jpg)](https://youtu.be/9YOd-lwKeXU)
