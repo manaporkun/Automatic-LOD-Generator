@@ -60,32 +60,29 @@ namespace Plugins.AutoLODGenerator.Editor
                 settings.Validate();
 
                 // Get mesh and materials based on renderer type
-                Mesh originalMesh;
-                Material[] originalMaterials;
                 var originalTransform = sourceObject.transform;
 
-                if (rendererType == MeshRendererType.SkinnedMeshRenderer)
-                {
-                    var skinnedRenderer = sourceObject.GetComponent<SkinnedMeshRenderer>();
-                    originalMesh = skinnedRenderer.sharedMesh;
-                    originalMaterials = skinnedRenderer.sharedMaterials;
-                }
-                else
-                {
-                    var meshFilter = sourceObject.GetComponent<MeshFilter>();
-                    var meshRenderer = sourceObject.GetComponent<MeshRenderer>();
-                    originalMesh = meshFilter.sharedMesh;
-                    originalMaterials = meshRenderer.sharedMaterials;
-                }
-
-                if (originalMesh == null)
+                if (!TryGetMeshData(sourceObject, rendererType, out var originalMesh, out var originalMaterials))
                 {
                     result.ErrorMessage = $"'{sourceObject.name}' does not have a valid mesh assigned.";
                     return result;
                 }
 
+                // Cache source renderers before the loop
+                MeshRenderer sourceMeshRenderer = null;
+                SkinnedMeshRenderer sourceSkinnedRenderer = null;
+
+                if (rendererType == MeshRendererType.SkinnedMeshRenderer)
+                {
+                    sourceSkinnedRenderer = sourceObject.GetComponent<SkinnedMeshRenderer>();
+                }
+                else
+                {
+                    sourceMeshRenderer = sourceObject.GetComponent<MeshRenderer>();
+                }
+
                 result.OriginalVertexCount = originalMesh.vertexCount;
-                result.OriginalTriangleCount = originalMesh.triangles.Length / 3;
+                result.OriginalTriangleCount = GetTriangleCount(originalMesh);
                 result.LODVertexCounts = new int[settings.lodLevelCount];
                 result.LODTriangleCounts = new int[settings.lodLevelCount];
                 result.GeneratedMeshes = new Mesh[settings.lodLevelCount];
@@ -111,6 +108,7 @@ namespace Plugins.AutoLODGenerator.Editor
                         localScale = Vector3.one
                     }
                 };
+                lodGroupObject.transform.SetParent(originalTransform.parent, true);
 
                 var lodGroup = lodGroupObject.AddComponent<LODGroup>();
 
@@ -138,7 +136,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     }
 
                     result.LODVertexCounts[i] = lodMesh.vertexCount;
-                    result.LODTriangleCounts[i] = lodMesh.triangles.Length / 3;
+                    result.LODTriangleCounts[i] = GetTriangleCount(lodMesh);
                     result.GeneratedMeshes[i] = lodMesh;
 
                     // Save mesh to assets if requested
@@ -155,30 +153,28 @@ namespace Plugins.AutoLODGenerator.Editor
                     }
 
                     // Create LOD GameObject based on renderer type
-                    GameObject lodObject;
                     Renderer lodRenderer;
 
                     if (rendererType == MeshRendererType.SkinnedMeshRenderer)
                     {
-                        lodObject = CreateSkinnedLODObject(
+                        lodRenderer = CreateSkinnedLODObject(
                             sourceObject,
+                            sourceSkinnedRenderer,
                             lodGroupObject.transform,
                             lodMesh,
                             originalMaterials,
                             i);
-                        lodRenderer = lodObject.GetComponent<SkinnedMeshRenderer>();
                     }
                     else
                     {
-                        lodObject = CreateStaticLODObject(
+                        lodRenderer = CreateStaticLODObject(
                             sourceObject.name,
                             lodGroupObject.transform,
                             originalTransform,
                             lodMesh,
                             originalMaterials,
                             i,
-                            sourceObject.GetComponent<MeshRenderer>());
-                        lodRenderer = lodObject.GetComponent<MeshRenderer>();
+                            sourceMeshRenderer);
                     }
 
                     lods[i] = new LOD(screenHeight, new[] { lodRenderer });
@@ -208,7 +204,7 @@ namespace Plugins.AutoLODGenerator.Editor
             return result;
         }
 
-        private static GameObject CreateStaticLODObject(
+        private static Renderer CreateStaticLODObject(
             string baseName,
             Transform parent,
             Transform originalTransform,
@@ -232,23 +228,20 @@ namespace Plugins.AutoLODGenerator.Editor
             // Copy additional renderer settings
             if (sourceRenderer != null)
             {
-                lodMeshRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
-                lodMeshRenderer.receiveShadows = sourceRenderer.receiveShadows;
-                lodMeshRenderer.lightProbeUsage = sourceRenderer.lightProbeUsage;
-                lodMeshRenderer.reflectionProbeUsage = sourceRenderer.reflectionProbeUsage;
+                CopyRendererSettings(sourceRenderer, lodMeshRenderer);
             }
 
-            return lodObject;
+            return lodMeshRenderer;
         }
 
-        private static GameObject CreateSkinnedLODObject(
+        private static Renderer CreateSkinnedLODObject(
             GameObject sourceObject,
+            SkinnedMeshRenderer sourceRenderer,
             Transform parent,
             Mesh mesh,
             Material[] materials,
             int lodIndex)
         {
-            var sourceRenderer = sourceObject.GetComponent<SkinnedMeshRenderer>();
             var originalTransform = sourceObject.transform;
 
             var lodObject = new GameObject($"{sourceObject.name}_LOD{lodIndex}");
@@ -267,13 +260,10 @@ namespace Plugins.AutoLODGenerator.Editor
             lodRenderer.quality = sourceRenderer.quality;
 
             // Copy additional renderer settings
-            lodRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
-            lodRenderer.receiveShadows = sourceRenderer.receiveShadows;
-            lodRenderer.lightProbeUsage = sourceRenderer.lightProbeUsage;
-            lodRenderer.reflectionProbeUsage = sourceRenderer.reflectionProbeUsage;
+            CopyRendererSettings(sourceRenderer, lodRenderer);
             lodRenderer.updateWhenOffscreen = sourceRenderer.updateWhenOffscreen;
 
-            return lodObject;
+            return lodRenderer;
         }
 
         #endregion
@@ -322,39 +312,23 @@ namespace Plugins.AutoLODGenerator.Editor
                 quality = Mathf.Clamp01(quality);
 
                 // Get mesh and materials based on renderer type
-                Mesh originalMesh;
-                Material[] originalMaterials;
                 var originalTransform = sourceObject.transform;
 
-                if (rendererType == MeshRendererType.SkinnedMeshRenderer)
-                {
-                    var skinnedRenderer = sourceObject.GetComponent<SkinnedMeshRenderer>();
-                    originalMesh = skinnedRenderer.sharedMesh;
-                    originalMaterials = skinnedRenderer.sharedMaterials;
-                }
-                else
-                {
-                    var meshFilter = sourceObject.GetComponent<MeshFilter>();
-                    var meshRenderer = sourceObject.GetComponent<MeshRenderer>();
-                    originalMesh = meshFilter.sharedMesh;
-                    originalMaterials = meshRenderer.sharedMaterials;
-                }
-
-                if (originalMesh == null)
+                if (!TryGetMeshData(sourceObject, rendererType, out var originalMesh, out var originalMaterials))
                 {
                     result.ErrorMessage = $"'{sourceObject.name}' does not have a valid mesh assigned.";
                     return result;
                 }
 
                 result.OriginalVertexCount = originalMesh.vertexCount;
-                result.OriginalTriangleCount = originalMesh.triangles.Length / 3;
+                result.OriginalTriangleCount = GetTriangleCount(originalMesh);
 
                 // Simplify mesh
                 var simplifiedMesh = SimplifyMesh(originalMesh, quality);
                 simplifiedMesh.name = $"{originalMesh.name}{suffix}";
 
                 result.LODVertexCounts = new[] { simplifiedMesh.vertexCount };
-                result.LODTriangleCounts = new[] { simplifiedMesh.triangles.Length / 3 };
+                result.LODTriangleCounts = new[] { GetTriangleCount(simplifiedMesh) };
                 result.GeneratedMeshes = new[] { simplifiedMesh };
 
                 // Save mesh to assets if requested
@@ -396,8 +370,8 @@ namespace Plugins.AutoLODGenerator.Editor
                     newRenderer.bones = sourceRenderer.bones;
                     newRenderer.rootBone = sourceRenderer.rootBone;
                     newRenderer.quality = sourceRenderer.quality;
-                    newRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
-                    newRenderer.receiveShadows = sourceRenderer.receiveShadows;
+                    CopyRendererSettings(sourceRenderer, newRenderer);
+                    newRenderer.updateWhenOffscreen = sourceRenderer.updateWhenOffscreen;
                 }
                 else
                 {
@@ -407,8 +381,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
                     var newMeshRenderer = simplifiedObject.AddComponent<MeshRenderer>();
                     newMeshRenderer.sharedMaterials = originalMaterials;
-                    newMeshRenderer.shadowCastingMode = sourceRenderer.shadowCastingMode;
-                    newMeshRenderer.receiveShadows = sourceRenderer.receiveShadows;
+                    CopyRendererSettings(sourceRenderer, newMeshRenderer);
                 }
 
                 // Register undo
@@ -539,11 +512,9 @@ namespace Plugins.AutoLODGenerator.Editor
                 // Handle duplicates
                 assetPath = AssetDatabase.GenerateUniqueAssetPath(assetPath);
 
-                // Create a copy of the mesh to save
-                var meshToSave = Object.Instantiate(mesh);
-                meshToSave.name = meshName;
-
-                AssetDatabase.CreateAsset(meshToSave, assetPath);
+                // Save the mesh directly (meshes passed in are always newly created)
+                mesh.name = meshName;
+                AssetDatabase.CreateAsset(mesh, assetPath);
                 AssetDatabase.SaveAssets();
 
                 Debug.Log($"[Auto LOD] Mesh saved to: {assetPath}");
@@ -698,9 +669,61 @@ namespace Plugins.AutoLODGenerator.Editor
                     break;
             }
 
-            return mesh == null 
-                ? (-1, -1, MeshRendererType.None) 
-                : (mesh.vertexCount, mesh.triangles.Length / 3, rendererType);
+            return mesh == null
+                ? (-1, -1, MeshRendererType.None)
+                : (mesh.vertexCount, GetTriangleCount(mesh), rendererType);
+        }
+
+        #endregion
+
+        #region Private Helpers
+
+        /// <summary>
+        /// Gets the triangle count of a mesh without allocating a copy of the index buffer.
+        /// </summary>
+        private static int GetTriangleCount(Mesh mesh)
+        {
+            var indexCount = 0;
+            for (var i = 0; i < mesh.subMeshCount; i++)
+                indexCount += (int)mesh.GetIndexCount(i);
+            return indexCount / 3;
+        }
+
+        /// <summary>
+        /// Retrieves mesh and materials from a GameObject based on renderer type.
+        /// </summary>
+        private static bool TryGetMeshData(GameObject gameObject, MeshRendererType rendererType,
+            out Mesh mesh, out Material[] materials)
+        {
+            mesh = null;
+            materials = null;
+
+            if (rendererType == MeshRendererType.SkinnedMeshRenderer)
+            {
+                var skinnedRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+                mesh = skinnedRenderer.sharedMesh;
+                materials = skinnedRenderer.sharedMaterials;
+            }
+            else
+            {
+                var meshFilter = gameObject.GetComponent<MeshFilter>();
+                var meshRenderer = gameObject.GetComponent<MeshRenderer>();
+                mesh = meshFilter.sharedMesh;
+                materials = meshRenderer.sharedMaterials;
+            }
+
+            return mesh != null;
+        }
+
+        /// <summary>
+        /// Copies common renderer settings from one renderer to another.
+        /// </summary>
+        private static void CopyRendererSettings(Renderer source, Renderer destination)
+        {
+            destination.shadowCastingMode = source.shadowCastingMode;
+            destination.receiveShadows = source.receiveShadows;
+            destination.lightProbeUsage = source.lightProbeUsage;
+            destination.reflectionProbeUsage = source.reflectionProbeUsage;
         }
 
         #endregion

@@ -55,10 +55,15 @@ namespace Plugins.AutoLODGenerator.Editor
         private Vector2 _presetListScrollPos;
 
         // UI State
-        private Vector2 _settingsScrollPos;
+        private Vector2 _lodGroupScrollPos;
+        private Vector2 _simplifyScrollPos;
+        private Vector2 _batchScrollPos;
+        private Vector2 _presetsScrollPos;
         private Vector2 _resultsScrollPos;
         private bool _showAdvancedSettings;
-        private bool _showSaveOptions;
+        private bool _showSaveOptionsLOD;
+        private bool _showSaveOptionsSimplify;
+        private bool _showSaveOptionsBatch;
         private LODGenerationResult _lastResult;
 
         // Cached textures and styles
@@ -212,6 +217,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawLODGroupTab()
         {
+            _lodGroupScrollPos = EditorGUILayout.BeginScrollView(_lodGroupScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             // Object Selection Section
@@ -227,7 +233,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.Space(10);
 
             // Save Options
-            DrawSaveOptions();
+            DrawSaveOptions(ref _showSaveOptionsLOD);
 
             EditorGUILayout.Space(10);
 
@@ -251,6 +257,7 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawObjectSelection()
@@ -376,7 +383,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawAdvancedSettings()
         {
-            _settingsScrollPos = EditorGUILayout.BeginScrollView(_settingsScrollPos, GUILayout.MaxHeight(200));
 
             EditorGUILayout.LabelField("Quality Factors", EditorStyles.boldLabel);
             for (var i = 1; i < _settings.lodLevelCount; i++)
@@ -414,15 +420,13 @@ namespace Plugins.AutoLODGenerator.Editor
                     _selectedPreset = LODPreset.Custom;
                 }
             }
-
-            EditorGUILayout.EndScrollView();
         }
 
-        private void DrawSaveOptions()
+        private void DrawSaveOptions(ref bool showSaveOptions)
         {
-            _showSaveOptions = EditorGUILayout.Foldout(_showSaveOptions, "Save Options", true);
+            showSaveOptions = EditorGUILayout.Foldout(showSaveOptions, "Save Options", true);
 
-            if (_showSaveOptions)
+            if (showSaveOptions)
             {
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
@@ -578,6 +582,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawSimplifyTab()
         {
+            _simplifyScrollPos = EditorGUILayout.BeginScrollView(_simplifyScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             DrawSectionHeader("Single Mesh Simplification");
@@ -587,12 +592,15 @@ namespace Plugins.AutoLODGenerator.Editor
             // Object field
             _singleObject = EditorGUILayout.ObjectField("Source Object", _singleObject, typeof(GameObject), true) as GameObject;
 
+            string validationError = null;
+            var isValid = _singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out validationError);
+
             // Validation and mesh info
             if (_singleObject != null)
             {
-                if (!LODGeneratorCore.ValidateForLODGeneration(_singleObject, out var error))
+                if (!isValid)
                 {
-                    EditorGUILayout.HelpBox(error, MessageType.Warning);
+                    EditorGUILayout.HelpBox(validationError, MessageType.Warning);
                 }
                 else
                 {
@@ -622,7 +630,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.EndHorizontal();
 
             // Preview
-            if (_singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out _))
+            if (isValid)
             {
                 var stats = LODGeneratorCore.GetMeshStatistics(_singleObject);
                 var estimatedVerts = LODGeneratorCore.EstimateVertexCount(stats.vertices, _simplifyQuality);
@@ -638,12 +646,12 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.Space(10);
 
             // Save options
-            DrawSaveOptions();
+            DrawSaveOptions(ref _showSaveOptionsSimplify);
 
             EditorGUILayout.Space(10);
 
             // Simplify button
-            GUI.enabled = _singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out _);
+            GUI.enabled = isValid;
 
             if (GUILayout.Button("Simplify Mesh", GUILayout.Height(30)))
             {
@@ -678,6 +686,7 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawSimplifyResults()
@@ -715,6 +724,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawBatchTab()
         {
+            _batchScrollPos = EditorGUILayout.BeginScrollView(_batchScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             DrawSectionHeader("Batch Processing");
@@ -785,7 +795,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.Space(10);
 
             // Save options
-            DrawSaveOptions();
+            DrawSaveOptions(ref _showSaveOptionsBatch);
 
             EditorGUILayout.Space(10);
 
@@ -816,37 +826,73 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void ProcessBatch()
         {
             _isProcessing = true;
+            _processingProgress = 0f;
+            _processingStatus = "Starting...";
 
-            var result = LODGeneratorCore.ProcessBatch(
-                _selectedObjects.ToArray(),
-                _settings,
-                (progress, status) =>
+            var objects = _selectedObjects.ToArray();
+            var settings = _settings.Clone();
+            var results = new List<LODGenerationResult>();
+            var index = 0;
+            var successCount = 0;
+            var failureCount = 0;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            void ProcessNext()
+            {
+                if (index >= objects.Length)
                 {
-                    _processingProgress = progress;
-                    _processingStatus = status;
+                    EditorApplication.update -= ProcessNext;
+                    stopwatch.Stop();
+
+                    _lastBatchResult = new BatchProcessingResult
+                    {
+                        TotalObjects = objects.Length,
+                        SuccessCount = successCount,
+                        FailureCount = failureCount,
+                        Results = results.ToArray(),
+                        ProcessingTimeSeconds = (float)stopwatch.Elapsed.TotalSeconds
+                    };
+
+                    _isProcessing = false;
+                    _processingProgress = 1f;
+                    _processingStatus = "Complete!";
+
+                    if (_lastBatchResult.AllSucceeded)
+                    {
+                        Debug.Log($"[Auto LOD] Batch processing complete: {successCount} objects processed in {_lastBatchResult.ProcessingTimeSeconds:F2}s");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Auto LOD] Batch processing complete with errors: {successCount} succeeded, {failureCount} failed");
+                    }
+
                     Repaint();
-                },
-                _saveMeshesToAssets,
-                _meshSavePath);
+                    return;
+                }
 
-            _lastBatchResult = result;
-            _isProcessing = false;
+                var obj = objects[index];
+                _processingProgress = (float)index / objects.Length;
+                _processingStatus = $"Processing {obj.name}... ({index + 1}/{objects.Length})";
 
-            if (result.AllSucceeded)
-            {
-                Debug.Log($"[Auto LOD] Batch processing complete: {result.SuccessCount} objects processed in {result.ProcessingTimeSeconds:F2}s");
+                var result = LODGeneratorCore.GenerateLODGroup(obj, settings, _saveMeshesToAssets, _meshSavePath);
+                results.Add(result);
+
+                if (result.Success)
+                    successCount++;
+                else
+                    failureCount++;
+
+                index++;
+                Repaint();
             }
-            else
-            {
-                Debug.LogWarning($"[Auto LOD] Batch processing complete with errors: {result.SuccessCount} succeeded, {result.FailureCount} failed");
-            }
 
-            Repaint();
+            EditorApplication.update += ProcessNext;
         }
 
         private void DrawBatchResults()
@@ -884,6 +930,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawPresetsTab()
         {
+            _presetsScrollPos = EditorGUILayout.BeginScrollView(_presetsScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             // Current Settings Section
@@ -1034,6 +1081,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         #endregion
