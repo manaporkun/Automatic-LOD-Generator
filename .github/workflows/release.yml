@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "VERSION=$TAG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract the changelog section for this version
+          VERSION="$VERSION"
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, ver)) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          # Write to file for the release body
+          echo "$CHANGELOG" > release_notes.md
+
+          if [ -z "$CHANGELOG" ]; then
+            echo "No changelog entry found for version $VERSION, using auto-generated notes."
+            echo "AUTO_NOTES=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ env.VERSION }}"
+          body_path: release_notes.md
+          generate_release_notes: ${{ env.AUTO_NOTES == 'true' }}
+          files: |
+            Auto-LOD-Generator.unitypackage
