@@ -17,6 +17,7 @@ namespace Plugins.AutoLODGenerator.Editor
         private const float MinWindowWidth = 420f;
         private const float MinWindowHeight = 600f;
         private const string IconPath = "Assets/Plugins/Auto-LOD-Generator/Editor/icon.png";
+        private const string PackageIconPath = "Packages/com.manaporkun.auto-lod-generator/Editor/icon.png";
 
         #endregion
 
@@ -53,6 +54,8 @@ namespace Plugins.AutoLODGenerator.Editor
         private string[] _customPresetNames = new string[0];
         private int _selectedCustomPresetIndex = -1;
         private Vector2 _presetListScrollPos;
+        private bool _showPresetFolderSettings;
+        private string _presetFolderPath;
 
         // UI State
         private Vector2 _lodGroupScrollPos;
@@ -88,7 +91,7 @@ namespace Plugins.AutoLODGenerator.Editor
         private void OnEnable()
         {
             _settings = new LODGeneratorSettings();
-            _iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
+            _iconTexture = LoadIconTexture();
 
             // Subscribe to selection changes
             Selection.selectionChanged += OnSelectionChanged;
@@ -124,6 +127,35 @@ namespace Plugins.AutoLODGenerator.Editor
         private void RefreshCustomPresetsList()
         {
             _customPresetNames = LODGeneratorSettings.GetCustomPresetNames();
+            _presetFolderPath = LODGeneratorSettings.GetCustomPresetsFolder();
+        }
+
+        /// <summary>
+        /// Loads the icon texture, trying multiple paths for compatibility.
+        /// Supports both project installation and UPM package installation.
+        /// </summary>
+        private Texture2D LoadIconTexture()
+        {
+            // Try project path first
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
+            if (texture != null) return texture;
+
+            // Try UPM package path
+            texture = AssetDatabase.LoadAssetAtPath<Texture2D>(PackageIconPath);
+            if (texture != null) return texture;
+
+            // Try to find by searching
+            var guids = AssetDatabase.FindAssets("t:Texture2D AutoLOD icon", new[] { "Assets", "Packages" });
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.Contains("Auto-LOD") || path.Contains("AutoLOD"))
+                {
+                    return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                }
+            }
+
+            return null;
         }
 
         #endregion
@@ -974,6 +1006,56 @@ namespace Plugins.AutoLODGenerator.Editor
             GUI.enabled = true;
 
             EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Preset Folder Settings
+            DrawSectionHeader("Preset Storage Location");
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            _showPresetFolderSettings = EditorGUILayout.Foldout(_showPresetFolderSettings, "Storage Settings", true);
+            if (_showPresetFolderSettings)
+            {
+                EditorGUILayout.LabelField("Current Folder:", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(_presetFolderPath, EditorStyles.miniLabel);
+
+                EditorGUILayout.Space(5);
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Browse..."))
+                {
+                    var selectedPath = EditorUtility.OpenFolderPanel("Select Presets Folder", "Assets", "");
+                    if (!string.IsNullOrEmpty(selectedPath))
+                    {
+                        // Convert to relative path
+                        if (selectedPath.StartsWith(Application.dataPath))
+                        {
+                            var relativePath = "Assets" + selectedPath.Substring(Application.dataPath.Length);
+                            LODGeneratorSettings.SetCustomPresetsFolder(relativePath);
+                            _presetFolderPath = relativePath;
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("Invalid Path",
+                                "Please select a folder within the Assets directory.", "OK");
+                        }
+                    }
+                }
+
+                if (GUILayout.Button("Reset to Default"))
+                {
+                    LODGeneratorSettings.SetCustomPresetsFolder(null);
+                    _presetFolderPath = LODGeneratorSettings.GetCustomPresetsFolder();
+                }
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.HelpBox(
+                    "Presets are now saved in your project folder by default (Assets/Editor/AutoLODGenerator/Presets). " +
+                    "This ensures they persist across package updates. Legacy presets from the old location are automatically migrated.",
+                    MessageType.Info);
+            }
 
             EditorGUILayout.EndVertical();
 
