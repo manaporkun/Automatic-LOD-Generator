@@ -55,6 +55,10 @@ namespace Plugins.AutoLODGenerator.Editor
         private Vector2 _presetListScrollPos;
 
         // UI State
+        private Vector2 _lodGroupScrollPos;
+        private Vector2 _simplifyScrollPos;
+        private Vector2 _batchScrollPos;
+        private Vector2 _presetsScrollPos;
         private Vector2 _settingsScrollPos;
         private Vector2 _resultsScrollPos;
         private bool _showAdvancedSettings;
@@ -214,6 +218,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawLODGroupTab()
         {
+            _lodGroupScrollPos = EditorGUILayout.BeginScrollView(_lodGroupScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             // Object Selection Section
@@ -253,6 +258,7 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawObjectSelection()
@@ -580,6 +586,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawSimplifyTab()
         {
+            _simplifyScrollPos = EditorGUILayout.BeginScrollView(_simplifyScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             DrawSectionHeader("Single Mesh Simplification");
@@ -683,6 +690,7 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawSimplifyResults()
@@ -720,6 +728,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawBatchTab()
         {
+            _batchScrollPos = EditorGUILayout.BeginScrollView(_batchScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             DrawSectionHeader("Batch Processing");
@@ -821,6 +830,7 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void ProcessBatch()
@@ -924,6 +934,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawPresetsTab()
         {
+            _presetsScrollPos = EditorGUILayout.BeginScrollView(_presetsScrollPos);
             EditorGUILayout.BeginVertical(_boxStyle);
 
             // Current Settings Section
@@ -1074,6 +1085,7 @@ namespace Plugins.AutoLODGenerator.Editor
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         #endregion
