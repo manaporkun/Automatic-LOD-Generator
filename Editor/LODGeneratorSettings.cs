@@ -46,7 +46,20 @@ namespace Plugins.AutoLODGenerator.Editor
         public const int MinLODLevels = 2;
         public const int MaxLODLevels = 6;
 
-        private const string CustomPresetsFolder = "Assets/Plugins/Auto-LOD-Generator/Editor/Presets";
+        /// <summary>
+        /// Default folder for custom presets (inside user's project, survives package updates).
+        /// </summary>
+        private const string DefaultCustomPresetsFolder = "Assets/Editor/AutoLODGenerator/Presets";
+
+        /// <summary>
+        /// Legacy folder for backward compatibility (old location inside plugin folder).
+        /// </summary>
+        private const string LegacyCustomPresetsFolder = "Assets/Plugins/Auto-LOD-Generator/Editor/Presets";
+
+        /// <summary>
+        /// EditorPrefs key for custom preset folder path.
+        /// </summary>
+        private const string CustomPresetsFolderPrefsKey = "AutoLODGenerator_CustomPresetsFolder";
 
         /// <summary>
         /// Creates settings with default values.
@@ -168,6 +181,31 @@ namespace Plugins.AutoLODGenerator.Editor
         #region Preset Save/Load
 
         /// <summary>
+        /// Gets the folder path for custom presets. Uses user-defined path if set, otherwise default.
+        /// </summary>
+        public static string GetCustomPresetsFolder()
+        {
+            var userPath = EditorPrefs.GetString(CustomPresetsFolderPrefsKey, "");
+            return string.IsNullOrEmpty(userPath) ? DefaultCustomPresetsFolder : userPath;
+        }
+
+        /// <summary>
+        /// Sets a custom folder path for presets.
+        /// </summary>
+        /// <param name="path">The folder path (relative to project root, starting with 'Assets/').</param>
+        public static void SetCustomPresetsFolder(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                EditorPrefs.DeleteKey(CustomPresetsFolderPrefsKey);
+            }
+            else
+            {
+                EditorPrefs.SetString(CustomPresetsFolderPrefsKey, path);
+            }
+        }
+
+        /// <summary>
         /// Saves the current settings as a custom preset.
         /// </summary>
         /// <param name="name">Name for the preset.</param>
@@ -182,10 +220,12 @@ namespace Plugins.AutoLODGenerator.Editor
 
             try
             {
+                var presetsFolder = GetCustomPresetsFolder();
+
                 // Ensure directory exists
-                if (!Directory.Exists(CustomPresetsFolder))
+                if (!Directory.Exists(presetsFolder))
                 {
-                    Directory.CreateDirectory(CustomPresetsFolder);
+                    Directory.CreateDirectory(presetsFolder);
                 }
 
                 presetName = name;
@@ -195,7 +235,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 File.WriteAllText(filePath, json);
                 AssetDatabase.Refresh();
 
-                Debug.Log($"[Auto LOD] Preset '{name}' saved successfully.");
+                Debug.Log($"[Auto LOD] Preset '{name}' saved to: {filePath}");
                 return true;
             }
             catch (Exception ex)
@@ -206,7 +246,7 @@ namespace Plugins.AutoLODGenerator.Editor
         }
 
         /// <summary>
-        /// Loads a custom preset by name.
+        /// Loads a custom preset by name. Checks current location, then legacy location.
         /// </summary>
         /// <param name="name">Name of the preset to load.</param>
         /// <returns>True if loaded successfully.</returns>
@@ -215,14 +255,31 @@ namespace Plugins.AutoLODGenerator.Editor
             try
             {
                 var filePath = GetPresetPath(name);
+                string json;
 
+                // Check current location first
                 if (!File.Exists(filePath))
                 {
+                    // Try legacy location for backward compatibility
+                    var legacyPath = GetLegacyPresetPath(name);
+                    if (File.Exists(legacyPath))
+                    {
+                        // Migrate from legacy to new location
+                        json = File.ReadAllText(legacyPath);
+                        JsonUtility.FromJsonOverwrite(json, this);
+                        
+                        // Save to new location
+                        SaveAsPreset(name);
+                        
+                        Debug.Log($"[Auto LOD] Preset '{name}' migrated from legacy location.");
+                        return true;
+                    }
+
                     Debug.LogError($"[Auto LOD] Preset '{name}' not found.");
                     return false;
                 }
 
-                var json = File.ReadAllText(filePath);
+                json = File.ReadAllText(filePath);
                 JsonUtility.FromJsonOverwrite(json, this);
 
                 Debug.Log($"[Auto LOD] Preset '{name}' loaded successfully.");
@@ -236,7 +293,7 @@ namespace Plugins.AutoLODGenerator.Editor
         }
 
         /// <summary>
-        /// Deletes a custom preset.
+        /// Deletes a custom preset. Checks both current and legacy locations.
         /// </summary>
         /// <param name="name">Name of the preset to delete.</param>
         /// <returns>True if deleted successfully.</returns>
@@ -245,20 +302,42 @@ namespace Plugins.AutoLODGenerator.Editor
             try
             {
                 var filePath = GetPresetPath(name);
+                var deleted = false;
 
-                if (!File.Exists(filePath))
+                // Try current location
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+
+                    // Also delete meta file if exists
+                    var metaPath = filePath + ".meta";
+                    if (File.Exists(metaPath))
+                    {
+                        File.Delete(metaPath);
+                    }
+
+                    deleted = true;
+                }
+
+                // Also check legacy location
+                var legacyPath = GetLegacyPresetPath(name);
+                if (File.Exists(legacyPath))
+                {
+                    File.Delete(legacyPath);
+
+                    var legacyMetaPath = legacyPath + ".meta";
+                    if (File.Exists(legacyMetaPath))
+                    {
+                        File.Delete(legacyMetaPath);
+                    }
+
+                    deleted = true;
+                }
+
+                if (!deleted)
                 {
                     Debug.LogError($"[Auto LOD] Preset '{name}' not found.");
                     return false;
-                }
-
-                File.Delete(filePath);
-
-                // Also delete meta file if exists
-                var metaPath = filePath + ".meta";
-                if (File.Exists(metaPath))
-                {
-                    File.Delete(metaPath);
                 }
 
                 AssetDatabase.Refresh();
@@ -274,25 +353,38 @@ namespace Plugins.AutoLODGenerator.Editor
         }
 
         /// <summary>
-        /// Gets all available custom preset names.
+        /// Gets all available custom preset names from both current and legacy locations.
         /// </summary>
-        /// <returns>Array of preset names.</returns>
+        /// <returns>Array of preset names (duplicates removed).</returns>
         public static string[] GetCustomPresetNames()
         {
-            if (!Directory.Exists(CustomPresetsFolder))
+            var presetNames = new System.Collections.Generic.HashSet<string>();
+
+            // Check current location
+            var presetsFolder = GetCustomPresetsFolder();
+            if (Directory.Exists(presetsFolder))
             {
-                return new string[0];
+                var files = Directory.GetFiles(presetsFolder, "*.json");
+                foreach (var file in files)
+                {
+                    presetNames.Add(Path.GetFileNameWithoutExtension(file));
+                }
             }
 
-            var files = Directory.GetFiles(CustomPresetsFolder, "*.json");
-            var names = new string[files.Length];
-
-            for (var i = 0; i < files.Length; i++)
+            // Check legacy location for backward compatibility
+            if (Directory.Exists(LegacyCustomPresetsFolder))
             {
-                names[i] = Path.GetFileNameWithoutExtension(files[i]);
+                var legacyFiles = Directory.GetFiles(LegacyCustomPresetsFolder, "*.json");
+                foreach (var file in legacyFiles)
+                {
+                    presetNames.Add(Path.GetFileNameWithoutExtension(file));
+                }
             }
 
-            return names;
+            var result = new string[presetNames.Count];
+            presetNames.CopyTo(result);
+            System.Array.Sort(result);
+            return result;
         }
 
         /// <summary>
@@ -314,7 +406,17 @@ namespace Plugins.AutoLODGenerator.Editor
             {
                 name = name.Replace(c, '_');
             }
-            return Path.Combine(CustomPresetsFolder, $"{name}.json");
+            return Path.Combine(GetCustomPresetsFolder(), $"{name}.json");
+        }
+
+        private static string GetLegacyPresetPath(string name)
+        {
+            // Sanitize filename
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            return Path.Combine(LegacyCustomPresetsFolder, $"{name}.json");
         }
 
         #endregion
