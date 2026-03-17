@@ -5,6 +5,18 @@ All notable changes to Auto LOD Generator will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-03-17
+
+### Fixed
+- **Icon path for UPM installations** - Fixed hardcoded icon path that failed to load when package installed via Package Manager
+- **Preset storage location** - Moved from plugin folder to user project folder (`Assets/Editor/AutoLODGenerator/Presets`) to survive package updates
+- **Legacy preset migration** - Automatically migrates presets from old location to new location
+- **Variable scope error** - Fixed CS0136 compilation error in `LoadPreset()` method
+
+### Added
+- **Preset storage configuration** - Added UI in Presets tab to configure custom preset folder location
+- **Unit tests for Core** - Added `LODGeneratorCoreTests` with 12 additional test cases
+
 ## [2.1.0] - 2025-03-17
 
 ### Added
