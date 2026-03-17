@@ -59,7 +59,6 @@ namespace Plugins.AutoLODGenerator.Editor
         private Vector2 _simplifyScrollPos;
         private Vector2 _batchScrollPos;
         private Vector2 _presetsScrollPos;
-        private Vector2 _settingsScrollPos;
         private Vector2 _resultsScrollPos;
         private bool _showAdvancedSettings;
         private bool _showSaveOptionsLOD;
@@ -384,7 +383,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawAdvancedSettings()
         {
-            _settingsScrollPos = EditorGUILayout.BeginScrollView(_settingsScrollPos, GUILayout.MaxHeight(200));
 
             EditorGUILayout.LabelField("Quality Factors", EditorStyles.boldLabel);
             for (var i = 1; i < _settings.lodLevelCount; i++)
@@ -422,8 +420,6 @@ namespace Plugins.AutoLODGenerator.Editor
                     _selectedPreset = LODPreset.Custom;
                 }
             }
-
-            EditorGUILayout.EndScrollView();
         }
 
         private void DrawSaveOptions(ref bool showSaveOptions)
