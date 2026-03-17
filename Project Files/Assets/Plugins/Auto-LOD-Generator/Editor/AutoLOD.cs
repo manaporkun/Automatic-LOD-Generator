@@ -73,7 +73,7 @@ namespace Plugins.AutoLODGenerator.Editor
         [MenuItem(MenuRoot + "/Quick Generate LOD Group %&l", true)]
         public static bool ValidateQuickGenerateLODGroup()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace Plugins.AutoLODGenerator.Editor
         [MenuItem(MenuRoot + "/Quick Simplify (50%)", true)]
         public static bool ValidateQuickSimplify()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         #endregion
@@ -128,7 +128,7 @@ namespace Plugins.AutoLODGenerator.Editor
         [MenuItem(ContextMenuRoot + "/Generate LOD Group", true)]
         public static bool ValidateContextGenerateLODGroup()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         /// <summary>
@@ -149,13 +149,13 @@ namespace Plugins.AutoLODGenerator.Editor
         [MenuItem(ContextMenuRoot + "/Simplify Mesh (50%)", true)]
         public static bool ValidateContextSimplify50()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         [MenuItem(ContextMenuRoot + "/Simplify Mesh (25%)", true)]
         public static bool ValidateContextSimplify25()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace Plugins.AutoLODGenerator.Editor
         [MenuItem(MenuRoot + "/Generate with Preset/VR", true)]
         public static bool ValidateGenerateWithPreset()
         {
-            return GetValidSelectedObjects().Length > 0;
+            return HasValidSelectedObjects();
         }
 
         #endregion
@@ -273,6 +273,16 @@ namespace Plugins.AutoLODGenerator.Editor
                     Debug.LogWarning($"[Auto LOD] Failed to simplify '{obj.name}': {result.ErrorMessage}");
                 }
             }
+        }
+
+        private static bool HasValidSelectedObjects()
+        {
+            foreach (var go in Selection.gameObjects)
+            {
+                if (LODGeneratorCore.ValidateForLODGeneration(go, out _))
+                    return true;
+            }
+            return false;
         }
 
         private static GameObject[] GetValidSelectedObjects()
