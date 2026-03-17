@@ -38,23 +38,20 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
 
 1. Open **Window > Package Manager**
 2. Click **+ > Add package from git URL**
-3. First, install the required dependency:
-   ```
-   https://github.com/Whinarn/UnityMeshSimplifier.git
-   ```
-4. Then install Auto LOD Generator:
+3. Enter:
    ```
    https://github.com/manaporkun/Automatic-LOD-Generator.git
    ```
+
+The required [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) dependency is installed automatically.
 
 > To install a specific version, append `#v2.1.0` to the URL.
 
 ### Manual Installation
 
-1. Install [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) via Package Manager (git URL above)
-2. Download `Auto-LOD-Generator.unitypackage` from the [Releases page](https://github.com/manaporkun/Automatic-LOD-Generator/releases)
-3. In Unity, go to **Assets > Import Package > Custom Package**
-4. Select the downloaded file and import
+1. Download `Auto-LOD-Generator.unitypackage` from the [Releases page](https://github.com/manaporkun/Automatic-LOD-Generator/releases)
+2. In Unity, go to **Assets > Import Package > Custom Package**
+3. Select the downloaded file and import (the dependency will be installed automatically)
 
 ## Quick Start
 
