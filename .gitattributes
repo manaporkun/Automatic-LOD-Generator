@@ -1,2 +1,84 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Unity serialized files
+*.meta text eol=lf
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.mat text eol=lf
+*.anim text eol=lf
+*.controller text eol=lf
+*.overrideController text eol=lf
+*.physicMaterial text eol=lf
+*.physicsMaterial2D text eol=lf
+*.playable text eol=lf
+*.mask text eol=lf
+*.brush text eol=lf
+*.flare text eol=lf
+*.fontsettings text eol=lf
+*.guiskin text eol=lf
+*.giparams text eol=lf
+*.renderTexture text eol=lf
+*.spriteatlas text eol=lf
+*.terrainlayer text eol=lf
+*.mixer text eol=lf
+*.shadervariants text eol=lf
+*.preset text eol=lf
+*.asmdef text eol=lf
+
+# Source code
+*.cs text diff=csharp eol=lf
+*.shader text eol=lf
+*.cginc text eol=lf
+*.hlsl text eol=lf
+*.compute text eol=lf
+
+# Image formats
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.psd binary
+*.tga binary
+*.tif binary
+*.tiff binary
+*.gif binary
+*.bmp binary
+*.exr binary
+*.hdr binary
+*.iff binary
+
+# Audio formats
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aif binary
+
+# 3D model formats
+*.fbx binary
+*.obj binary
+*.blend binary
+*.dae binary
+*.3ds binary
+*.max binary
+
+# Video formats
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.webm binary
+
+# Font formats
+*.ttf binary
+*.otf binary
+
+# Compressed archives
+*.zip binary
+*.gz binary
+*.7z binary
+
+# Unity packages
+*.unitypackage binary
+
+# Documentation
+*.pdf binary
