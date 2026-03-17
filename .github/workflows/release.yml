@@ -19,7 +19,7 @@ jobs:
       - name: Validate tag matches package.json version
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          PKG_VERSION=$(jq -r '.version' package.json)
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
             echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
             exit 1
@@ -54,5 +54,3 @@ jobs:
           name: "v${{ env.VERSION }}"
           body_path: release_notes.md
           generate_release_notes: ${{ env.AUTO_NOTES == 'true' }}
-          files: |
-            Auto-LOD-Generator.unitypackage
