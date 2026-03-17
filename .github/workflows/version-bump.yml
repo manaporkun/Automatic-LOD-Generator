@@ -28,7 +28,7 @@ jobs:
       - name: Calculate new version
         id: version
         run: |
-          CURRENT=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          CURRENT=$(jq -r '.version' package.json)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
           case "${{ github.event.inputs.bump_type }}" in
@@ -44,8 +44,7 @@ jobs:
 
       - name: Update package.json version
         run: |
-          PKG="Project Files/Assets/Plugins/Auto-LOD-Generator/package.json"
-          jq --arg v "${{ steps.version.outputs.new }}" '.version = $v' "$PKG" > tmp.json && mv tmp.json "$PKG"
+          jq --arg v "${{ steps.version.outputs.new }}" '.version = $v' package.json > tmp.json && mv tmp.json package.json
 
       - name: Prepend changelog entry
         run: |
@@ -55,14 +54,14 @@ jobs:
           # Create new changelog entry
           ENTRY="## [$VERSION] - $DATE\n\n### Added\n\n### Changed\n\n### Fixed\n\n"
 
-          # Insert after the header lines (line 6, after the semver adherence line)
+          # Insert after the header lines (line 7, after the semver adherence line)
           sed -i "7i\\${ENTRY}" CHANGELOG.md
 
       - name: Commit and tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json" CHANGELOG.md
+          git add package.json CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
           git tag "v${{ steps.version.outputs.new }}"
           git push origin main --tags
