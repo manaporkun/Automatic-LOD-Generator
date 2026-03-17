@@ -16,18 +16,17 @@ jobs:
 
       - name: Validate package.json
         run: |
-          PKG="Project Files/Assets/Plugins/Auto-LOD-Generator/package.json"
-          if [ ! -f "$PKG" ]; then
+          if [ ! -f "package.json" ]; then
             echo "::error::package.json not found"
             exit 1
           fi
 
           # Validate JSON syntax
-          jq empty "$PKG" || { echo "::error::package.json is not valid JSON"; exit 1; }
+          jq empty package.json || { echo "::error::package.json is not valid JSON"; exit 1; }
 
           # Check required fields
           for field in name version displayName unity; do
-            val=$(jq -r ".$field" "$PKG")
+            val=$(jq -r ".$field" package.json)
             if [ "$val" = "null" ] || [ -z "$val" ]; then
               echo "::error::package.json missing required field: $field"
               exit 1
@@ -38,7 +37,7 @@ jobs:
 
       - name: Validate assembly definitions
         run: |
-          ASMDEF="Project Files/Assets/Plugins/Auto-LOD-Generator/Editor/Plugins.AutoLODGenerator.Editor.asmdef"
+          ASMDEF="Editor/Plugins.AutoLODGenerator.Editor.asmdef"
           if [ ! -f "$ASMDEF" ]; then
             echo "::error::Assembly definition not found"
             exit 1
@@ -48,7 +47,7 @@ jobs:
 
       - name: Check version consistency
         run: |
-          PKG_VERSION=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          PKG_VERSION=$(jq -r '.version' package.json)
           echo "Package version: $PKG_VERSION"
 
           # Check that this version exists in CHANGELOG.md
@@ -58,7 +57,6 @@ jobs:
 
       - name: Validate .meta files exist for source files
         run: |
-          PLUGIN_DIR="Project Files/Assets/Plugins/Auto-LOD-Generator"
           MISSING=0
 
           # Check that every .cs and .asmdef file has a corresponding .meta file
@@ -67,7 +65,7 @@ jobs:
               echo "::error::Missing .meta file for: $file"
               MISSING=$((MISSING + 1))
             fi
-          done < <(find "$PLUGIN_DIR" -type f \( -name "*.cs" -o -name "*.asmdef" -o -name "*.json" \) -print0)
+          done < <(find Editor -type f \( -name "*.cs" -o -name "*.asmdef" \) -print0)
 
           if [ "$MISSING" -gt 0 ]; then
             echo "::error::$MISSING .meta file(s) missing. Unity requires .meta files for all assets."

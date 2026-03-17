@@ -9,7 +9,7 @@
 
 Transform complex 3D meshes into optimized LOD groups with just a few clicks. Perfect for game developers who want to improve performance without manually creating multiple mesh versions.
 
-<img src="/Screenshot.png" width="100%">
+<img src=".github/screenshot.png" width="100%">
 
 ## Features
 
@@ -34,7 +34,7 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
 
 ## Installation
 
-### Option A: Unity Package Manager (Recommended)
+### Unity Package Manager (Recommended)
 
 1. Open **Window > Package Manager**
 2. Click **+ > Add package from git URL**
@@ -44,22 +44,17 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
    ```
 4. Then install Auto LOD Generator:
    ```
-   https://github.com/manaporkun/Automatic-LOD-Generator.git?path=Project Files/Assets/Plugins/Auto-LOD-Generator
+   https://github.com/manaporkun/Automatic-LOD-Generator.git
    ```
 
 > To install a specific version, append `#v2.1.0` to the URL.
 
-### Option B: Import Unity Package
+### Manual Installation
 
 1. Install [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) via Package Manager (git URL above)
 2. Download `Auto-LOD-Generator.unitypackage` from the [Releases page](https://github.com/manaporkun/Automatic-LOD-Generator/releases)
 3. In Unity, go to **Assets > Import Package > Custom Package**
 4. Select the downloaded file and import
-
-### Option C: Clone Repository
-
-1. Install [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) via Package Manager
-2. Clone this repository into your project's `Assets/Plugins` folder
 
 ## Quick Start
 
@@ -98,8 +93,6 @@ You can save your own custom presets:
 2. Go to the **Presets** tab
 3. Configure your settings
 4. Enter a name and click **Save**
-
-Custom presets are stored in `Assets/Plugins/Auto-LOD-Generator/Editor/Presets/`.
 
 ## Menu Reference
 
@@ -237,11 +230,12 @@ if (type == MeshRendererType.SkinnedMeshRenderer)
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting issues or pull requests.
 
 ### Development Setup
-1. Clone the repository
-2. Open the `Project Files` folder in Unity 2021.3+
-3. Install the UnityMeshSimplifier package
-4. Make your changes
-5. Submit a pull request
+1. Clone this repository
+2. Create a new Unity 2021.3+ project (or use an existing one)
+3. In Package Manager, click **+ > Add package from disk** and select the `package.json` at the repo root
+4. Install the [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) dependency
+5. Import the demo scene from **Package Manager > Auto LOD Generator > Samples**
+6. Make your changes and submit a pull request
 
 ## Changelog
 
@@ -253,9 +247,8 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## Credits
 
-- Based on [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) by Mattias Edlund
-- [Icon Source](https://pixabay.com/vectors/crop-circle-glyph-sacred-geometry-5147211/)
+- Built on [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) by Mattias Edlund
 
 ## Video Tutorial
 
-https://youtu.be/9YOd-lwKeXU
+[![Auto LOD Generator Tutorial](https://img.youtube.com/vi/9YOd-lwKeXU/maxresdefault.jpg)](https://youtu.be/9YOd-lwKeXU)

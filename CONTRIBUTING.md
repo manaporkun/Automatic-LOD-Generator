@@ -49,16 +49,24 @@ Please be respectful and constructive in all interactions. We're all here to mak
    git clone https://github.com/manaporkun/Automatic-LOD-Generator.git
    ```
 
-2. **Open in Unity:**
+2. **Create or open a Unity project:**
    - Open Unity Hub
-   - Click "Add" and select the `Project Files` folder
-   - Open the project
+   - Create a new project or open an existing one (Unity 2021.3+)
 
-3. **Install dependencies:**
-   - Open Window > Package Manager
-   - Add package from git URL: `https://github.com/Whinarn/UnityMeshSimplifier.git`
+3. **Add the package locally:**
+   - Open **Window > Package Manager**
+   - Click **+ > Add package from disk**
+   - Select the `package.json` at the repository root
 
-4. **Verify setup:**
+4. **Install dependencies:**
+   - In Package Manager, click **+ > Add package from git URL**
+   - Enter: `https://github.com/Whinarn/UnityMeshSimplifier.git`
+
+5. **Import demo scene (optional):**
+   - In Package Manager, find **Auto LOD Generator**
+   - Expand **Samples** and click **Import** next to "Demo Scene"
+
+6. **Verify setup:**
    - Open Tools > Auto LOD Generator > Open Window
    - The window should open without errors
 
