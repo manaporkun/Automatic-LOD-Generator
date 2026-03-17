@@ -112,6 +112,21 @@ namespace Plugins.AutoLODGenerator.Editor
             return HasValidSelectedObjects();
         }
 
+        /// <summary>
+        /// Save LOD meshes for selected LOD groups to assets.
+        /// </summary>
+        [MenuItem(MenuRoot + "/Save LOD Meshes to Assets", false, 30)]
+        public static void ToolsSaveLODMeshesToAssets()
+        {
+            ContextSaveLODMeshesToAssets();
+        }
+
+        [MenuItem(MenuRoot + "/Save LOD Meshes to Assets", true)]
+        public static bool ValidateToolsSaveLODMeshesToAssets()
+        {
+            return ValidateContextSaveLODMeshesToAssets();
+        }
+
         #endregion
 
         #region Context Menu Items (Right-click in Hierarchy)
@@ -129,6 +144,55 @@ namespace Plugins.AutoLODGenerator.Editor
         public static bool ValidateContextGenerateLODGroup()
         {
             return HasValidSelectedObjects();
+        }
+
+        /// <summary>
+        /// Context menu item to save LOD meshes to assets.
+        /// Useful for converting LOD groups to prefabs.
+        /// </summary>
+        [MenuItem(ContextMenuRoot + "/Save LOD Meshes to Assets", false, 10)]
+        public static void ContextSaveLODMeshesToAssets()
+        {
+            var selectedObjects = Selection.gameObjects;
+            var savedCount = 0;
+
+            foreach (var obj in selectedObjects)
+            {
+                if (obj.GetComponent<LODGroup>() == null) continue;
+
+                var paths = LODGeneratorCore.SaveLODMeshesToAssets(obj);
+                if (paths.Length > 0)
+                {
+                    savedCount++;
+                    Debug.Log($"[Auto LOD] Saved meshes for '{obj.name}' - {paths.Length} mesh(es) saved.");
+                }
+            }
+
+            if (savedCount > 0)
+            {
+                EditorUtility.DisplayDialog("Auto LOD Generator",
+                    $"Successfully saved meshes for {savedCount} LOD group(s).\n\n" +
+                    "You can now safely convert these objects to prefabs.",
+                    "OK");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Auto LOD Generator",
+                    "No unsaved meshes found in selected objects.\n\n" +
+                    "All meshes are already saved as assets.",
+                    "OK");
+            }
+        }
+
+        [MenuItem(ContextMenuRoot + "/Save LOD Meshes to Assets", true)]
+        public static bool ValidateContextSaveLODMeshesToAssets()
+        {
+            foreach (var go in Selection.gameObjects)
+            {
+                if (go.GetComponent<LODGroup>() != null)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
