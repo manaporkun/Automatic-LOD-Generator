@@ -46,7 +46,7 @@ namespace Plugins.AutoLODGenerator.Editor
         private BatchProcessingResult _lastBatchResult;
 
         // Mesh saving options
-        private bool _saveMeshesToAssets;
+        private bool _saveMeshesToAssets = true;
         private string _meshSavePath = "Assets/GeneratedLODs";
 
         // Custom presets
@@ -64,9 +64,9 @@ namespace Plugins.AutoLODGenerator.Editor
         private Vector2 _presetsScrollPos;
         private Vector2 _resultsScrollPos;
         private bool _showAdvancedSettings;
-        private bool _showSaveOptionsLOD;
-        private bool _showSaveOptionsSimplify;
-        private bool _showSaveOptionsBatch;
+        private bool _showSaveOptionsLOD = true;
+        private bool _showSaveOptionsSimplify = true;
+        private bool _showSaveOptionsBatch = true;
         private LODGenerationResult _lastResult;
 
         // Cached textures and styles
@@ -487,9 +487,9 @@ namespace Plugins.AutoLODGenerator.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "⚠️ Meshes will NOT be saved as assets. " +
-                        "If you plan to convert this LOD Group to a Prefab, you should enable 'Save Meshes to Assets'. " +
-                        "Otherwise, LOD meshes will disappear when creating the prefab.",
+                        "Meshes will NOT be saved as assets. Simplified LOD levels (LOD1 and beyond) " +
+                        "exist only in memory and will be lost if you convert this object to a Prefab. " +
+                        "Enable 'Save Meshes to Assets' to prevent this.",
                         MessageType.Warning);
                 }
 
