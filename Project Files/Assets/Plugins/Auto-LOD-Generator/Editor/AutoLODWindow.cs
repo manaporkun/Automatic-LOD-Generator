@@ -589,7 +589,8 @@ namespace Plugins.AutoLODGenerator.Editor
             // Object field
             _singleObject = EditorGUILayout.ObjectField("Source Object", _singleObject, typeof(GameObject), true) as GameObject;
 
-            var isValid = _singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out var validationError);
+            string validationError = null;
+            var isValid = _singleObject != null && LODGeneratorCore.ValidateForLODGeneration(_singleObject, out validationError);
 
             // Validation and mesh info
             if (_singleObject != null)
