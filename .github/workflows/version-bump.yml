@@ -1,0 +1,68 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate new version
+        id: version
+        run: |
+          CURRENT=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "${{ github.event.inputs.bump_type }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumping version: $CURRENT -> $NEW_VERSION"
+
+      - name: Update package.json version
+        run: |
+          PKG="Project Files/Assets/Plugins/Auto-LOD-Generator/package.json"
+          jq --arg v "${{ steps.version.outputs.new }}" '.version = $v' "$PKG" > tmp.json && mv tmp.json "$PKG"
+
+      - name: Prepend changelog entry
+        run: |
+          VERSION="${{ steps.version.outputs.new }}"
+          DATE=$(date +%Y-%m-%d)
+
+          # Create new changelog entry
+          ENTRY="## [$VERSION] - $DATE\n\n### Added\n\n### Changed\n\n### Fixed\n\n"
+
+          # Insert after the header lines (line 6, after the semver adherence line)
+          sed -i "7i\\${ENTRY}" CHANGELOG.md
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json" CHANGELOG.md
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
+          git tag "v${{ steps.version.outputs.new }}"
+          git push origin main --tags

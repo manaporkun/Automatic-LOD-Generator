@@ -2,6 +2,8 @@
 
 [![Unity](https://img.shields.io/badge/Unity-2021.3%2B-black.svg)](https://unity.com/)
 [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/manaporkun/Automatic-LOD-Generator?include_prereleases)](https://github.com/manaporkun/Automatic-LOD-Generator/releases)
+[![CI](https://github.com/manaporkun/Automatic-LOD-Generator/actions/workflows/ci.yml/badge.svg)](https://github.com/manaporkun/Automatic-LOD-Generator/actions/workflows/ci.yml)
 
 **Automatic Level of Detail (LOD) generator and mesh simplifier for Unity.**
 
@@ -32,24 +34,32 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
 
 ## Installation
 
-### Step 1: Install UnityMeshSimplifier (Required Dependency)
-
-This plugin requires [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/).
+### Option A: Unity Package Manager (Recommended)
 
 1. Open **Window > Package Manager**
 2. Click **+ > Add package from git URL**
-3. Enter: `https://github.com/Whinarn/UnityMeshSimplifier.git`
-4. Click **Add**
+3. First, install the required dependency:
+   ```
+   https://github.com/Whinarn/UnityMeshSimplifier.git
+   ```
+4. Then install Auto LOD Generator:
+   ```
+   https://github.com/manaporkun/Automatic-LOD-Generator.git?path=Project Files/Assets/Plugins/Auto-LOD-Generator
+   ```
 
-### Step 2: Install Auto LOD Generator
+> To install a specific version, append `#v2.1.0` to the URL.
 
-**Option A: Import Unity Package**
-1. Download `Auto-LOD-Generator.unitypackage` from this repository
-2. In Unity, go to **Assets > Import Package > Custom Package**
-3. Select the downloaded file and import
+### Option B: Import Unity Package
 
-**Option B: Clone Repository**
-1. Clone this repository into your project's `Assets/Plugins` folder
+1. Install [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) via Package Manager (git URL above)
+2. Download `Auto-LOD-Generator.unitypackage` from the [Releases page](https://github.com/manaporkun/Automatic-LOD-Generator/releases)
+3. In Unity, go to **Assets > Import Package > Custom Package**
+4. Select the downloaded file and import
+
+### Option C: Clone Repository
+
+1. Install [UnityMeshSimplifier](https://github.com/Whinarn/UnityMeshSimplifier/) via Package Manager
+2. Clone this repository into your project's `Assets/Plugins` folder
 
 ## Quick Start
 

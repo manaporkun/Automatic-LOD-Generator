@@ -1,0 +1,29 @@
+{
+  "name": "com.manaporkun.auto-lod-generator",
+  "version": "2.1.0",
+  "displayName": "Auto LOD Generator",
+  "description": "Automatic Level of Detail (LOD) generator and mesh simplifier for Unity. Generate optimized LOD groups with configurable presets, batch processing, and skinned mesh support.",
+  "unity": "2021.3",
+  "documentationUrl": "https://github.com/manaporkun/Automatic-LOD-Generator#readme",
+  "changelogUrl": "https://github.com/manaporkun/Automatic-LOD-Generator/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/manaporkun/Automatic-LOD-Generator/blob/main/LICENSE",
+  "dependencies": {
+    "com.whinarn.unitymeshsimplifier": "https://github.com/Whinarn/UnityMeshSimplifier.git"
+  },
+  "keywords": [
+    "lod",
+    "level-of-detail",
+    "mesh-simplification",
+    "optimization",
+    "performance",
+    "editor-tool"
+  ],
+  "author": {
+    "name": "manaporkun",
+    "url": "https://github.com/manaporkun"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manaporkun/Automatic-LOD-Generator.git"
+  }
+}

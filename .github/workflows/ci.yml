@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate package.json
+        run: |
+          PKG="Project Files/Assets/Plugins/Auto-LOD-Generator/package.json"
+          if [ ! -f "$PKG" ]; then
+            echo "::error::package.json not found"
+            exit 1
+          fi
+
+          # Validate JSON syntax
+          jq empty "$PKG" || { echo "::error::package.json is not valid JSON"; exit 1; }
+
+          # Check required fields
+          for field in name version displayName unity; do
+            val=$(jq -r ".$field" "$PKG")
+            if [ "$val" = "null" ] || [ -z "$val" ]; then
+              echo "::error::package.json missing required field: $field"
+              exit 1
+            fi
+          done
+
+          echo "package.json is valid"
+
+      - name: Validate assembly definitions
+        run: |
+          ASMDEF="Project Files/Assets/Plugins/Auto-LOD-Generator/Editor/Plugins.AutoLODGenerator.Editor.asmdef"
+          if [ ! -f "$ASMDEF" ]; then
+            echo "::error::Assembly definition not found"
+            exit 1
+          fi
+          jq empty "$ASMDEF" || { echo "::error::asmdef is not valid JSON"; exit 1; }
+          echo "Assembly definitions are valid"
+
+      - name: Check version consistency
+        run: |
+          PKG_VERSION=$(jq -r '.version' "Project Files/Assets/Plugins/Auto-LOD-Generator/package.json")
+          echo "Package version: $PKG_VERSION"
+
+          # Check that this version exists in CHANGELOG.md
+          if ! grep -q "\[$PKG_VERSION\]" CHANGELOG.md; then
+            echo "::warning::Version $PKG_VERSION not found in CHANGELOG.md"
+          fi
+
+      - name: Validate .meta files exist for source files
+        run: |
+          PLUGIN_DIR="Project Files/Assets/Plugins/Auto-LOD-Generator"
+          MISSING=0
+
+          # Check that every .cs and .asmdef file has a corresponding .meta file
+          while IFS= read -r -d '' file; do
+            if [ ! -f "${file}.meta" ]; then
+              echo "::error::Missing .meta file for: $file"
+              MISSING=$((MISSING + 1))
+            fi
+          done < <(find "$PLUGIN_DIR" -type f \( -name "*.cs" -o -name "*.asmdef" -o -name "*.json" \) -print0)
+
+          if [ "$MISSING" -gt 0 ]; then
+            echo "::error::$MISSING .meta file(s) missing. Unity requires .meta files for all assets."
+            exit 1
+          fi
+
+          echo "All source files have corresponding .meta files"

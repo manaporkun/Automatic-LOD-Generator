@@ -5,7 +5,28 @@ All notable changes to Auto LOD Generator will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2024-01-XX
+## [2.1.0] - 2025-03-17
+
+### Added
+- **UPM package support** - Install directly via Unity Package Manager with git URL
+- **Assembly Definition** (`Plugins.AutoLODGenerator.Editor.asmdef`) for faster compilation and namespace isolation
+- **Editor test scaffolding** with NUnit test assembly and initial settings tests
+- **GitHub Actions CI/CD** - Automated package validation on PRs and release creation on tags
+- **Version bump workflow** - One-click semantic version bumping via GitHub Actions
+- **.editorconfig** for consistent code style enforcement across editors
+- **Release badge** and **CI badge** in README
+
+### Changed
+- **Improved installation docs** - Added UPM (git URL) as recommended installation method
+- **Enhanced .gitattributes** - Proper binary/text handling for Unity asset types
+- **All editor tabs are now scrollable** for better usability in small windows
+
+### Fixed
+- CS0165 compilation error from unassigned `validationError` variable
+- Nested scroll view in advanced settings causing UI shrinking
+- Zero-allocation menu validation for better editor performance
+
+## [2.0.0] - 2024-01
 
 ### Added
 - **New unified editor window** with modern tabbed UI (LOD Group, Simplify Mesh, Batch Process)
@@ -23,7 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Save meshes to Assets** - Export simplified meshes as asset files
 - **Custom preset saving/loading** - Save and reuse your own configurations
 - **Comprehensive statistics** display showing reduction percentages
-- **Assembly Definition file** for faster compilation
 - **GitHub issue templates** for bug reports and feature requests
 - **Pull request template** for contributors
 - **CONTRIBUTING.md** with development guidelines
@@ -57,5 +77,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 2.1.0 | 2025-03 | UPM support, CI/CD, assembly definition, test scaffolding |
 | 2.0.0 | 2024-01 | Major refactor: Modern UI, presets, batch processing |
 | 1.0.0 | 2022-04 | Initial release |
