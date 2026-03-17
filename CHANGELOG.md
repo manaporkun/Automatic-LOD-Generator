@@ -5,6 +5,16 @@ All notable changes to Auto LOD Generator will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2025-03-17
+
+### Fixed
+- **Prefab conversion issue (#2)** - Fixed LOD meshes disappearing when converting LOD Group to prefab
+  - Added `HasUnsavedMeshes()` to check for in-memory meshes
+  - Added `SaveLODMeshesToAssets()` to retroactively save meshes for existing LOD groups
+  - Added context menu item: `Auto LOD > Save LOD Meshes to Assets`
+  - Added warning in UI when meshes are not saved as assets
+  - Meshes now properly persist when creating prefabs
+
 ## [2.1.1] - 2025-03-17
 
 ### Fixed

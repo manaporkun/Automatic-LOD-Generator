@@ -483,6 +483,138 @@ namespace Plugins.AutoLODGenerator.Editor
         #region Mesh Asset Saving
 
         /// <summary>
+        /// Checks if an LOD group has any unsaved (in-memory) meshes that would be lost when converting to prefab.
+        /// </summary>
+        /// <param name="lodGroupObject">The LOD group GameObject to check.</param>
+        /// <returns>True if there are unsaved meshes.</returns>
+        public static bool HasUnsavedMeshes(GameObject lodGroupObject)
+        {
+            if (lodGroupObject == null) return false;
+
+            var lodGroup = lodGroupObject.GetComponent<LODGroup>();
+            if (lodGroup == null) return false;
+
+            var lods = lodGroup.GetLODs();
+            foreach (var lod in lods)
+            {
+                foreach (var renderer in lod.renderers)
+                {
+                    if (renderer == null) continue;
+
+                    Mesh mesh = null;
+                    if (renderer is SkinnedMeshRenderer skinnedRenderer)
+                    {
+                        mesh = skinnedRenderer.sharedMesh;
+                    }
+                    else if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                    {
+                        mesh = meshFilter.sharedMesh;
+                    }
+
+                    if (mesh != null && !AssetDatabase.Contains(mesh))
+                    {
+                        return true; // Mesh exists in memory but not as an asset
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Saves all unsaved meshes from an LOD group to asset files.
+        /// Useful for retroactively saving meshes when converting to prefab.
+        /// </summary>
+        /// <param name="lodGroupObject">The LOD group GameObject.</param>
+        /// <param name="folderPath">The folder path to save to.</param>
+        /// <returns>Array of saved asset paths.</returns>
+        public static string[] SaveLODMeshesToAssets(GameObject lodGroupObject, string folderPath = null)
+        {
+            if (lodGroupObject == null)
+            {
+                Debug.LogError("[Auto LOD] Cannot save meshes from null object.");
+                return Array.Empty<string>();
+            }
+
+            var lodGroup = lodGroupObject.GetComponent<LODGroup>();
+            if (lodGroup == null)
+            {
+                Debug.LogError("[Auto LOD] Object does not have an LODGroup component.");
+                return Array.Empty<string>();
+            }
+
+            if (string.IsNullOrEmpty(folderPath))
+            {
+                folderPath = DefaultMeshSaveFolder;
+            }
+
+            EnsureDirectoryExists(folderPath);
+
+            var savedPaths = new List<string>();
+            var lods = lodGroup.GetLODs();
+            var baseName = lodGroupObject.name.Replace("_LODGroup", "");
+
+            for (var lodIndex = 0; lodIndex < lods.Length; lodIndex++)
+            {
+                var lod = lods[lodIndex];
+                foreach (var renderer in lod.renderers)
+                {
+                    if (renderer == null) continue;
+
+                    Mesh mesh = null;
+                    bool isSkinned = false;
+                    
+                    if (renderer is SkinnedMeshRenderer skinnedRenderer)
+                    {
+                        mesh = skinnedRenderer.sharedMesh;
+                        isSkinned = true;
+                    }
+                    else if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                    {
+                        mesh = meshFilter.sharedMesh;
+                    }
+
+                    if (mesh != null && !AssetDatabase.Contains(mesh))
+                    {
+                        // This is an unsaved mesh - save it
+                        var meshName = $"{baseName}_LOD{lodIndex}";
+                        var savedPath = SaveMeshAsset(mesh, folderPath, meshName);
+                        
+                        if (!string.IsNullOrEmpty(savedPath))
+                        {
+                            savedPaths.Add(savedPath);
+                            
+                            // Reload the saved mesh and assign it back
+                            var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                            if (savedMesh != null)
+                            {
+                                if (isSkinned)
+                                {
+                                    ((SkinnedMeshRenderer)renderer).sharedMesh = savedMesh;
+                                }
+                                else
+                                {
+                                    meshFilter.sharedMesh = savedMesh;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (savedPaths.Count > 0)
+            {
+                Debug.Log($"[Auto LOD] Saved {savedPaths.Count} meshes to assets in '{folderPath}'.");
+            }
+            else
+            {
+                Debug.Log("[Auto LOD] No unsaved meshes found - all meshes are already assets.");
+            }
+
+            return savedPaths.ToArray();
+        }
+
+        /// <summary>
         /// Saves a mesh as an asset file.
         /// </summary>
         /// <param name="mesh">The mesh to save.</param>

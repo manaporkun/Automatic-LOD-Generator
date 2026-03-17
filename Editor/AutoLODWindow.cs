@@ -482,7 +482,15 @@ namespace Plugins.AutoLODGenerator.Editor
                     }
                     EditorGUILayout.EndHorizontal();
 
-                    EditorGUILayout.HelpBox("Meshes will be saved as .asset files for reuse.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Meshes will be saved as .asset files for reuse and prefab support.", MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "⚠️ Meshes will NOT be saved as assets. " +
+                        "If you plan to convert this LOD Group to a Prefab, you should enable 'Save Meshes to Assets'. " +
+                        "Otherwise, LOD meshes will disappear when creating the prefab.",
+                        MessageType.Warning);
                 }
 
                 EditorGUILayout.EndVertical();
@@ -593,6 +601,16 @@ namespace Plugins.AutoLODGenerator.Editor
                     {
                         EditorGUILayout.LabelField($"  {path}", EditorStyles.miniLabel);
                     }
+                }
+                else if (_lastResult.GeneratedLODGroup != null && 
+                         LODGeneratorCore.HasUnsavedMeshes(_lastResult.GeneratedLODGroup))
+                {
+                    // Show warning if meshes are not saved as assets
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.HelpBox(
+                        "⚠️ This LOD Group has unsaved meshes. If you convert it to a Prefab, the LODs will disappear. " +
+                        "Right-click the object and select 'Auto LOD > Save LOD Meshes to Assets' to fix this.",
+                        MessageType.Warning);
                 }
 
                 if (GUILayout.Button("Select Generated LOD Group"))
