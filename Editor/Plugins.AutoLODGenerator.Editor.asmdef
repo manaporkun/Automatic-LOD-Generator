@@ -12,7 +12,15 @@
   "overrideReferences": false,
   "precompiledReferences": [],
   "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
+  "defineConstraints": [
+    "HAS_UNITY_MESH_SIMPLIFIER"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.whinarn.unitymeshsimplifier",
+      "expression": "",
+      "define": "HAS_UNITY_MESH_SIMPLIFIER"
+    }
+  ],
   "noEngineReferences": false
 }
