@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using UnityEngine;
 using UnityEditor;
+using UnityMeshSimplifier;
 
 namespace Plugins.AutoLODGenerator.Editor
 {
@@ -43,6 +44,40 @@ namespace Plugins.AutoLODGenerator.Editor
         /// </summary>
         public float culledTransitionHeight = 0.01f;
 
+        #region Simplification Options
+
+        /// <summary>
+        /// Enable smart linking to prevent holes in simplified meshes.
+        /// </summary>
+        [Tooltip("Enables smart vertex linking to prevent holes in the simplified mesh")]
+        public bool enableSmartLink = true;
+
+        /// <summary>
+        /// Maximum distance between vertices for smart linking.
+        /// </summary>
+        [Tooltip("Maximum distance between vertices for smart linking (higher values for large meshes)")]
+        public double vertexLinkDistance = double.Epsilon;
+
+        /// <summary>
+        /// Preserve border edges during simplification.
+        /// </summary>
+        [Tooltip("Preserve border edges (limits simplification but prevents mesh edge deformation)")]
+        public bool preserveBorders = false;
+
+        /// <summary>
+        /// Preserve UV seam edges during simplification.
+        /// </summary>
+        [Tooltip("Preserve UV seam edges (prevents UV stretching at seams)")]
+        public bool preserveSeams = false;
+
+        /// <summary>
+        /// Preserve UV foldover edges during simplification.
+        /// </summary>
+        [Tooltip("Preserve UV foldover edges (prevents UV distortion on overlapping UVs)")]
+        public bool preserveFoldovers = false;
+
+        #endregion
+
         public const int MinLODLevels = 2;
         public const int MaxLODLevels = 6;
 
@@ -83,6 +118,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.5f, 0.2f, 0.05f, 0.02f, 0.01f, 0.005f };
                     includeCulledLevel = true;
                     culledTransitionHeight = 0.01f;
+                    // Performance: minimal preservation for maximum simplification
+                    enableSmartLink = true;
+                    preserveBorders = false;
+                    preserveSeams = false;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.Balanced:
@@ -92,6 +132,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.5f, 0.3f, 0.15f, 0.05f, 0.02f, 0.01f };
                     includeCulledLevel = true;
                     culledTransitionHeight = 0.01f;
+                    // Balanced: smart linking enabled, moderate preservation
+                    enableSmartLink = true;
+                    preserveBorders = false;
+                    preserveSeams = false;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.Quality:
@@ -101,6 +146,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.6f, 0.4f, 0.25f, 0.12f, 0.05f, 0.02f };
                     includeCulledLevel = true;
                     culledTransitionHeight = 0.005f;
+                    // Quality: preserve more for better visual fidelity
+                    enableSmartLink = true;
+                    preserveBorders = true;
+                    preserveSeams = true;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.MobileLowEnd:
@@ -110,6 +160,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.4f, 0.1f, 0.05f, 0.02f, 0.01f, 0.005f };
                     includeCulledLevel = true;
                     culledTransitionHeight = 0.02f;
+                    // Mobile Low: aggressive simplification
+                    enableSmartLink = true;
+                    preserveBorders = false;
+                    preserveSeams = false;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.MobileHighEnd:
@@ -119,6 +174,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.5f, 0.25f, 0.08f, 0.03f, 0.01f, 0.005f };
                     includeCulledLevel = true;
                     culledTransitionHeight = 0.015f;
+                    // Mobile High: balanced for modern mobile
+                    enableSmartLink = true;
+                    preserveBorders = false;
+                    preserveSeams = false;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.VR:
@@ -128,6 +188,11 @@ namespace Plugins.AutoLODGenerator.Editor
                     screenTransitionHeights = new[] { 0.7f, 0.5f, 0.3f, 0.15f, 0.08f, 0.03f };
                     includeCulledLevel = false;
                     culledTransitionHeight = 0.01f;
+                    // VR: preserve borders to avoid artifacts at edges
+                    enableSmartLink = true;
+                    preserveBorders = true;
+                    preserveSeams = true;
+                    preserveFoldovers = false;
                     break;
 
                 case LODPreset.Custom:
@@ -176,6 +241,31 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             culledTransitionHeight = Mathf.Clamp01(culledTransitionHeight);
+
+            // Ensure vertex link distance is non-negative
+            if (vertexLinkDistance < 0)
+                vertexLinkDistance = 0;
+        }
+
+        /// <summary>
+        /// Creates SimplificationOptions for use with MeshSimplifier.
+        /// </summary>
+        /// <returns>Configured SimplificationOptions.</returns>
+        public SimplificationOptions CreateSimplificationOptions()
+        {
+            return new SimplificationOptions
+            {
+                EnableSmartLink = enableSmartLink,
+                VertexLinkDistance = vertexLinkDistance,
+                PreserveBorderEdges = preserveBorders,
+                PreserveUVSeamEdges = preserveSeams,
+                PreserveUVFoldoverEdges = preserveFoldovers,
+                MaxIterationCount = 100,
+                Agressiveness = 7.0,
+                PreserveSurfaceCurvature = false,
+                ManualUVComponentCount = false,
+                UVComponentCount = 2
+            };
         }
 
         #region Preset Save/Load
@@ -496,6 +586,10 @@ namespace Plugins.AutoLODGenerator.Editor
     {
         None,
         MeshRenderer,
-        SkinnedMeshRenderer
+        SkinnedMeshRenderer,
+        /// <summary>
+        /// Root has no direct renderer, but has descendant GameObjects with valid renderers.
+        /// </summary>
+        Composite
     }
 }
