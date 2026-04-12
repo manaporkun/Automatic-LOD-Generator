@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -9,8 +11,65 @@ permissions:
   contents: write
 
 jobs:
+  tag-default-branch:
+    name: Tag Current Version
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version consistency
+        run: |
+          PKG_VERSION=$(jq -r '.version' package.json)
+          CHANGELOG_FIRST=""
+
+          while IFS= read -r line || [ -n "$line" ]; do
+            if [[ "$line" =~ ^##[[:space:]]+\[([^]]+)\] ]]; then
+              ver="${BASH_REMATCH[1]}"
+              if [ "$ver" != "Unreleased" ]; then
+                CHANGELOG_FIRST="$ver"
+                break
+              fi
+            fi
+          done < CHANGELOG.md
+
+          if [ -z "$CHANGELOG_FIRST" ]; then
+            echo "::error::No version heading (## [x.y.z]) found in CHANGELOG.md"
+            exit 1
+          fi
+
+          if [ "$CHANGELOG_FIRST" != "$PKG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) must match the first non-Unreleased section in CHANGELOG.md ($CHANGELOG_FIRST)."
+            exit 1
+          fi
+
+          echo "VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Create and push tag when missing
+        run: |
+          TAG="v${VERSION}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists; skipping."
+            exit 0
+          fi
+
+          git tag "${TAG}" "${GITHUB_SHA}"
+          git push origin "${TAG}" || {
+            if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+              echo "Tag ${TAG} already exists after push attempt; skipping."
+              exit 0
+            fi
+            echo "::error::Failed to push tag ${TAG}."
+            exit 1
+          }
+
   release:
     name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,30 +86,23 @@ jobs:
           echo "VERSION=$TAG_VERSION" >> "$GITHUB_ENV"
 
       - name: Extract changelog for this version
-        id: changelog
         run: |
-          # Extract the changelog section for this version
           VERSION="$VERSION"
           CHANGELOG=$(awk -v ver="$VERSION" '
-            /^## \[/ {
-              if (found) exit
-              if (index($0, ver)) found=1
-              next
-            }
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
             found { print }
           ' CHANGELOG.md)
 
-          # Write to file for the release body
-          echo "$CHANGELOG" > release_notes.md
-
           if [ -z "$CHANGELOG" ]; then
-            echo "No changelog entry found for version $VERSION, using auto-generated notes."
-            echo "AUTO_NOTES=true" >> "$GITHUB_ENV"
+            echo "::error::No changelog section found for version $VERSION."
+            exit 1
           fi
+
+          echo "$CHANGELOG" > release_notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "v${{ env.VERSION }}"
           body_path: release_notes.md
-          generate_release_notes: ${{ env.AUTO_NOTES == 'true' }}
