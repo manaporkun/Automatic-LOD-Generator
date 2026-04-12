@@ -51,17 +51,27 @@ jobs:
           VERSION="${{ steps.version.outputs.new }}"
           DATE=$(date +%Y-%m-%d)
 
-          # Create new changelog entry
-          ENTRY="## [$VERSION] - $DATE\n\n### Added\n\n### Changed\n\n### Fixed\n\n"
+          LINE=$(grep -n '^## \[' CHANGELOG.md | head -1 | cut -d: -f1) || true
+          if [ -z "$LINE" ]; then
+            echo "::error::No existing '## [version]' section found in CHANGELOG.md"
+            exit 1
+          fi
 
-          # Insert after the header lines (line 7, after the semver adherence line)
-          sed -i "7i\\${ENTRY}" CHANGELOG.md
+          {
+            head -n "$((LINE - 1))" CHANGELOG.md
+            printf '## [%s] - %s\n\n' "$VERSION" "$DATE"
+            printf '%s\n\n' "### Added" "### Changed" "### Fixed"
+            echo ""
+            tail -n "+$LINE" CHANGELOG.md
+          } > CHANGELOG.md.new && mv CHANGELOG.md.new CHANGELOG.md
 
       - name: Commit and tag
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
           git tag "v${{ steps.version.outputs.new }}"
-          git push origin main --tags
+          git push origin "HEAD:refs/heads/${DEFAULT_BRANCH}" --tags

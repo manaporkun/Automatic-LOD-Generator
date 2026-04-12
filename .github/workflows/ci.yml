@@ -50,9 +50,25 @@ jobs:
           PKG_VERSION=$(jq -r '.version' package.json)
           echo "Package version: $PKG_VERSION"
 
-          # Check that this version exists in CHANGELOG.md
-          if ! grep -q "\[$PKG_VERSION\]" CHANGELOG.md; then
-            echo "::warning::Version $PKG_VERSION not found in CHANGELOG.md"
+          CHANGELOG_FIRST=""
+          while IFS= read -r line || [ -n "$line" ]; do
+            if [[ "$line" =~ ^##[[:space:]]+\[([^]]+)\] ]]; then
+              ver="${BASH_REMATCH[1]}"
+              if [ "$ver" != "Unreleased" ]; then
+                CHANGELOG_FIRST="$ver"
+                break
+              fi
+            fi
+          done < CHANGELOG.md
+
+          if [ -z "$CHANGELOG_FIRST" ]; then
+            echo "::error::No version heading (## [x.y.z]) found in CHANGELOG.md"
+            exit 1
+          fi
+
+          if [ "$CHANGELOG_FIRST" != "$PKG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) must match the first non-Unreleased section in CHANGELOG.md ($CHANGELOG_FIRST)."
+            exit 1
           fi
 
       - name: Validate .meta files exist for source files
