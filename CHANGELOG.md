@@ -4,15 +4,40 @@ All notable changes to Auto LOD Generator will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-## [2.1.3] - 2026-04-12
 
-### Added
+## [2.2.1] - 2026-04-12
 
 ### Changed
+- Enabled automatic release publishing from default-branch merges by auto-tagging `v<package.json version>` when missing
+
+## [2.2.0] - 2025-03-17
+
+### Added
+- **Advanced Mesh Simplification Options** - Full integration with UnityMeshSimplifier's advanced features
+  - `Enable Smart Link` - Prevents holes in simplified meshes (enabled by default)
+  - `Vertex Link Distance` - Configurable distance for vertex linking
+  - `Preserve Borders` - Preserves mesh edge boundaries
+  - `Preserve UV Seams` - Prevents UV stretching at seams
+  - `Preserve UV Foldovers` - Prevents distortion on overlapping UVs
+  - Options are configurable per preset (Quality and VR presets enable border/seam preservation)
+  - New UI section in Advanced Settings for all simplification options
+
+### Changed
+- CI requires `package.json` version to match the first non-`Unreleased` section in `CHANGELOG.md`; Version Bump workflow prepends changelog entries with real newlines and pushes to the repository default branch
+- Release workflow now auto-tags the default branch when a new `package.json` version is merged, then publishes GitHub Releases from the matching changelog section
+- Updated `LODGeneratorSettings` with new simplification options fields
+- Updated `SimplifyMesh()` to use `SimplificationOptions` from settings
+- All LOD generation methods now pass settings to the simplifier
+
+## [2.1.3] - 2025-03-17
 
 ### Fixed
-
-
+- **Animation not working on generated LOD Groups** - Skinned mesh animations now work correctly
+  - Added `CopyAnimatorComponents()` to copy Animator/Animation to LOD groups
+  - Fixed bone reference remapping when skeleton is moved to LOD group (composite objects)
+  - Single mesh LOD generation now copies Animator component
+  - Simplify Mesh feature now copies Animator for skinned meshes
+  - Added `CollectBoneTransforms()` for bone remapping when skeleton hierarchy is moved
 
 ## [2.1.2] - 2025-03-17
 
