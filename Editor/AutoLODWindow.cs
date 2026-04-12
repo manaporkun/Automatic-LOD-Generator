@@ -330,8 +330,8 @@ namespace Plugins.AutoLODGenerator.Editor
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_selectedObjects[0]);
-                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
-                        ? " (Skinned)"
+                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer ? " (Skinned)"
+                        : stats.type == MeshRendererType.Composite ? " (Composite)"
                         : " (Static)";
                     EditorGUILayout.LabelField($"Mesh{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
                 }
@@ -415,7 +415,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
         private void DrawAdvancedSettings()
         {
-
             EditorGUILayout.LabelField("Quality Factors", EditorStyles.boldLabel);
             for (var i = 1; i < _settings.lodLevelCount; i++)
             {
@@ -452,6 +451,59 @@ namespace Plugins.AutoLODGenerator.Editor
                     _selectedPreset = LODPreset.Custom;
                 }
             }
+
+            EditorGUILayout.Space(10);
+            DrawSimplificationOptions();
+        }
+
+        private void DrawSimplificationOptions()
+        {
+            EditorGUILayout.LabelField("Mesh Simplification Options", EditorStyles.boldLabel);
+
+            EditorGUI.BeginChangeCheck();
+            _settings.enableSmartLink = EditorGUILayout.Toggle(
+                new GUIContent("Enable Smart Link", "Prevents holes in simplified meshes by linking close vertices"),
+                _settings.enableSmartLink);
+            if (EditorGUI.EndChangeCheck()) _selectedPreset = LODPreset.Custom;
+
+            if (_settings.enableSmartLink)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUI.BeginChangeCheck();
+                var vertexLinkDistanceFloat = (float)_settings.vertexLinkDistance;
+                vertexLinkDistanceFloat = EditorGUILayout.Slider(
+                    new GUIContent("Vertex Link Distance", "Max distance for vertex linking (increase for large meshes)"),
+                    vertexLinkDistanceFloat, 0f, 0.001f);
+                _settings.vertexLinkDistance = vertexLinkDistanceFloat;
+                if (EditorGUI.EndChangeCheck()) _selectedPreset = LODPreset.Custom;
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(5);
+
+            EditorGUI.BeginChangeCheck();
+            _settings.preserveBorders = EditorGUILayout.Toggle(
+                new GUIContent("Preserve Borders", "Preserves mesh edge boundaries (good for architectural meshes)"),
+                _settings.preserveBorders);
+            if (EditorGUI.EndChangeCheck()) _selectedPreset = LODPreset.Custom;
+
+            EditorGUI.BeginChangeCheck();
+            _settings.preserveSeams = EditorGUILayout.Toggle(
+                new GUIContent("Preserve UV Seams", "Prevents UV stretching at texture seams"),
+                _settings.preserveSeams);
+            if (EditorGUI.EndChangeCheck()) _selectedPreset = LODPreset.Custom;
+
+            EditorGUI.BeginChangeCheck();
+            _settings.preserveFoldovers = EditorGUILayout.Toggle(
+                new GUIContent("Preserve UV Foldovers", "Prevents distortion on overlapping UVs"),
+                _settings.preserveFoldovers);
+            if (EditorGUI.EndChangeCheck()) _selectedPreset = LODPreset.Custom;
+
+            EditorGUILayout.Space(5);
+            EditorGUILayout.HelpBox(
+                "Tip: Enable 'Preserve Borders' and 'Preserve UV Seams' for best visual quality. " +
+                "Disable them for maximum polygon reduction.",
+                MessageType.Info);
         }
 
         private void DrawSaveOptions(ref bool showSaveOptions)
@@ -655,8 +707,8 @@ namespace Plugins.AutoLODGenerator.Editor
                 else
                 {
                     var stats = LODGeneratorCore.GetMeshStatistics(_singleObject);
-                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer
-                        ? " (Skinned)"
+                    var rendererTypeStr = stats.type == MeshRendererType.SkinnedMeshRenderer ? " (Skinned)"
+                        : stats.type == MeshRendererType.Composite ? " (Composite)"
                         : " (Static)";
                     EditorGUILayout.LabelField($"Original{rendererTypeStr}: {stats.vertices:N0} vertices, {stats.triangles:N0} triangles");
                 }
@@ -695,6 +747,17 @@ namespace Plugins.AutoLODGenerator.Editor
 
             EditorGUILayout.Space(10);
 
+            // Simplification options
+            _showAdvancedSettings = EditorGUILayout.Foldout(_showAdvancedSettings, "Simplification Options", true);
+            if (_showAdvancedSettings)
+            {
+                EditorGUI.indentLevel++;
+                DrawSimplificationOptions();
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(10);
+
             // Save options
             DrawSaveOptions(ref _showSaveOptionsSimplify);
 
@@ -710,7 +773,8 @@ namespace Plugins.AutoLODGenerator.Editor
                     _simplifyQuality,
                     "_Simplified",
                     _saveMeshesToAssets,
-                    _meshSavePath);
+                    _meshSavePath,
+                    _settings);
                 _lastResult = result;
 
                 if (result.Success)
@@ -801,7 +865,9 @@ namespace Plugins.AutoLODGenerator.Editor
 
                     // Show mesh type
                     var type = LODGeneratorCore.GetMeshRendererType(_selectedObjects[i]);
-                    var typeLabel = type == MeshRendererType.SkinnedMeshRenderer ? "S" : "M";
+                    var typeLabel = type == MeshRendererType.SkinnedMeshRenderer ? "S"
+                        : type == MeshRendererType.Composite ? "C"
+                        : "M";
                     GUILayout.Label(typeLabel, GUILayout.Width(20));
 
                     if (GUILayout.Button("X", GUILayout.Width(25)))

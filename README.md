@@ -155,6 +155,23 @@ The quality factor determines how much the mesh is simplified:
 | 0.25 | ~75% | LOD3 - Far distance |
 | 0.1 | ~90% | LOD4 - Very far distance |
 
+### Mesh Simplification Options
+
+Advanced options to control the mesh simplification algorithm:
+
+| Option | Description | Recommended Use |
+|--------|-------------|-----------------|
+| **Enable Smart Link** | Links close vertices to prevent holes in simplified meshes | Always enabled (default) |
+| **Vertex Link Distance** | Max distance for vertex linking | Increase for very large meshes |
+| **Preserve Borders** | Preserves mesh edge boundaries | Architectural meshes, terrain |
+| **Preserve UV Seams** | Prevents UV stretching at texture seams | Characters with seam-based UVs |
+| **Preserve UV Foldovers** | Prevents distortion on overlapping UVs | Complex UV layouts |
+
+**Preset Defaults:**
+- **Performance**: Minimal preservation for maximum reduction
+- **Quality/VR**: Borders and seams preserved for best visuals
+- **Balanced**: Smart linking only
+
 ### Custom Presets
 
 You can save your own custom presets:
