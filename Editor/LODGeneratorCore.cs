@@ -563,13 +563,14 @@ namespace Plugins.AutoLODGenerator.Editor
 
                     Mesh mesh = null;
                     bool isSkinned = false;
+                    MeshFilter meshFilter = null;
                     
                     if (renderer is SkinnedMeshRenderer skinnedRenderer)
                     {
                         mesh = skinnedRenderer.sharedMesh;
                         isSkinned = true;
                     }
-                    else if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                    else if (renderer.TryGetComponent<MeshFilter>(out meshFilter))
                     {
                         mesh = meshFilter.sharedMesh;
                     }
