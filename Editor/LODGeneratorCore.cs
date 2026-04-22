@@ -116,6 +116,8 @@ namespace Plugins.AutoLODGenerator.Editor
                 var totalLODCount = settings.includeCulledLevel ? settings.lodLevelCount + 1 : settings.lodLevelCount;
                 var lods = new LOD[totalLODCount];
 
+                var simplificationOptions = settings.CreateSimplificationOptions();
+
                 // Generate each LOD level
                 for (var i = 0; i < settings.lodLevelCount; i++)
                 {
@@ -131,7 +133,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     else
                     {
                         // Simplify mesh for this LOD level
-                        lodMesh = SimplifyMesh(originalMesh, quality);
+                        lodMesh = SimplifyMesh(originalMesh, quality, simplificationOptions);
                         lodMesh.name = $"{originalMesh.name}_LOD{i}";
                     }
 
@@ -285,7 +287,8 @@ namespace Plugins.AutoLODGenerator.Editor
             float quality,
             string suffix = "_Simplified",
             bool saveMeshToAssets = false,
-            string meshSavePath = null)
+            string meshSavePath = null,
+            LODGeneratorSettings settings = null)
         {
             var result = new LODGenerationResult
             {
@@ -324,7 +327,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 result.OriginalTriangleCount = GetTriangleCount(originalMesh);
 
                 // Simplify mesh
-                var simplifiedMesh = SimplifyMesh(originalMesh, quality);
+                var simplifiedMesh = SimplifyMesh(originalMesh, quality, settings?.CreateSimplificationOptions());
                 simplifiedMesh.name = $"{originalMesh.name}{suffix}";
 
                 result.LODVertexCounts = new[] { simplifiedMesh.vertexCount };
@@ -405,7 +408,7 @@ namespace Plugins.AutoLODGenerator.Editor
         /// <param name="sourceMesh">The source mesh to simplify.</param>
         /// <param name="quality">Quality factor (0.0 to 1.0).</param>
         /// <returns>A new simplified mesh.</returns>
-        public static Mesh SimplifyMesh(Mesh sourceMesh, float quality)
+        public static Mesh SimplifyMesh(Mesh sourceMesh, float quality, SimplificationOptions? options = null)
         {
             if (sourceMesh == null)
                 throw new ArgumentNullException(nameof(sourceMesh));
@@ -419,6 +422,8 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             var meshSimplifier = new MeshSimplifier();
+            if (options.HasValue)
+                meshSimplifier.SimplificationOptions = options.Value;
             meshSimplifier.Initialize(sourceMesh);
             meshSimplifier.SimplifyMesh(quality);
 
