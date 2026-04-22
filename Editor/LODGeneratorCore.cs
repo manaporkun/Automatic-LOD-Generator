@@ -281,6 +281,9 @@ namespace Plugins.AutoLODGenerator.Editor
         /// <param name="suffix">Suffix to append to the object name.</param>
         /// <param name="saveMeshToAssets">Whether to save the mesh as an asset file.</param>
         /// <param name="meshSavePath">Custom path for saving mesh (optional).</param>
+        /// <param name="settings">Optional settings; only simplification-related fields
+        /// (preserveBorders, preserveSeams, preserveFoldovers, enableSmartLink,
+        /// vertexLinkDistance) are used. Validated before use.</param>
         /// <returns>Result containing the simplified mesh object and statistics.</returns>
         public static LODGenerationResult GenerateSimplifiedMesh(
             GameObject sourceObject,
@@ -327,6 +330,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 result.OriginalTriangleCount = GetTriangleCount(originalMesh);
 
                 // Simplify mesh
+                settings?.Validate();
                 var simplifiedMesh = SimplifyMesh(originalMesh, quality, settings?.CreateSimplificationOptions());
                 simplifiedMesh.name = $"{originalMesh.name}{suffix}";
 
@@ -407,6 +411,9 @@ namespace Plugins.AutoLODGenerator.Editor
         /// </summary>
         /// <param name="sourceMesh">The source mesh to simplify.</param>
         /// <param name="quality">Quality factor (0.0 to 1.0).</param>
+        /// <param name="options">Optional simplification settings. If <c>null</c>, the mesh
+        /// simplifier uses its default simplification options; otherwise the provided options
+        /// are applied before simplification.</param>
         /// <returns>A new simplified mesh.</returns>
         public static Mesh SimplifyMesh(Mesh sourceMesh, float quality, SimplificationOptions? options = null)
         {
