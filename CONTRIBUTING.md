@@ -172,8 +172,8 @@ Releases are automated with GitHub Actions once a new version lands on the defau
 
 1. **Changelog and version** — The version in `package.json` must match the **first** non-`[Unreleased]` section heading in `CHANGELOG.md` (for example `## [2.2.0]`). CI enforces this on every push and pull request.
 2. **Merge to default branch** — Once that version change is merged, the **Release** workflow checks whether `v<package.json version>` exists. If it does not, the workflow creates and pushes the tag automatically.
-3. **GitHub Release** — The `v*` tag trigger in the same workflow validates tag/package consistency, extracts that version’s changelog section, and publishes the GitHub Release.
-4. **Optional helper** — You can still run **Version Bump** (Actions → *Version Bump* → Run workflow) to bump patch/minor/major, scaffold changelog headings, and push the bump commit/tag in one action.
+3. **GitHub Release** — When the **Release** workflow creates a new tag, it extracts that version’s changelog section and publishes the GitHub Release in the same run. If the tag already exists, the release job is skipped.
+4. **Optional helper** — You can still run **Version Bump** (Actions → *Version Bump* → Run workflow) to bump patch/minor/major, scaffold changelog headings, push the bump commit/tag, and publish the GitHub Release in one action.
 
 If `CHANGELOG.md` is edited by hand, update `package.json` to the same version so CI stays green. Automation requires `GITHUB_TOKEN` to have `contents: write` so tags and releases can be created.
 
