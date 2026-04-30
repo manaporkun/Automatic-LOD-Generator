@@ -175,6 +175,8 @@ Releases are fully automated with GitHub Actions after changes land on the defau
 3. **Skip when needed** — Include `[skip release]` in the commit message to skip the automatic release workflow for that push.
 4. **Optional explicit bump** — You can still run **Version Bump** (Actions → *Version Bump* → Run workflow) when you need a specific patch/minor/major bump. That workflow creates the bump commit, tag, changelog section, and GitHub Release itself.
 
+Manual `v*` tag pushes by maintainers still publish releases. Automated tag pushes from release workflows are skipped by the tag-push release job because the originating workflow publishes the release directly.
+
 Automation requires `GITHUB_TOKEN` to have `contents: write` and the default branch to allow the workflow token to push the release commit and tag.
 
 ## Reporting Bugs

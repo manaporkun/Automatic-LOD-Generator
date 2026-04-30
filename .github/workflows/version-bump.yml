@@ -74,7 +74,7 @@ jobs:
           git add package.json CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }} [skip release]"
           git tag "v${{ steps.version.outputs.new }}"
-          git push origin "HEAD:refs/heads/${DEFAULT_BRANCH}" --tags
+          git push --atomic origin "HEAD:refs/heads/${DEFAULT_BRANCH}" "refs/tags/v${{ steps.version.outputs.new }}"
 
       - name: Extract changelog for new version
         run: |
