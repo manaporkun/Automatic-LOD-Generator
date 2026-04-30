@@ -214,7 +214,7 @@ Enable **Save Meshes to Assets** in the Save Options section to:
 - Export generated LOD meshes as `.asset` files
 - Reuse meshes across multiple prefabs
 - Reduce scene file size
-- **Default save location**: `Assets/GeneratedLODs/`
+- **Default save location**: `Assets/GeneratedLODs/<ModelName>/`
 
 ### Skinned Mesh Support
 

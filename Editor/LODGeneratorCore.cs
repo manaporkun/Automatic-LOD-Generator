@@ -99,6 +99,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     {
                         meshSavePath = DefaultMeshSaveFolder;
                     }
+                    meshSavePath = GetObjectMeshSaveFolder(meshSavePath, sourceObject.name);
                     EnsureDirectoryExists(meshSavePath);
                     result.SavedMeshPaths = new string[settings.lodLevelCount];
                 }
@@ -248,6 +249,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     {
                         meshSavePath = DefaultMeshSaveFolder;
                     }
+                    meshSavePath = GetObjectMeshSaveFolder(meshSavePath, sourceObject.name);
                     EnsureDirectoryExists(meshSavePath);
                 }
 
@@ -491,6 +493,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     {
                         meshSavePath = DefaultMeshSaveFolder;
                     }
+                    meshSavePath = GetObjectMeshSaveFolder(meshSavePath, sourceObject.name);
                     EnsureDirectoryExists(meshSavePath);
 
                     var savedPath = SaveMeshAsset(simplifiedMesh, meshSavePath, $"{sourceObject.name}{suffix}");
@@ -592,6 +595,7 @@ namespace Plugins.AutoLODGenerator.Editor
                     {
                         meshSavePath = DefaultMeshSaveFolder;
                     }
+                    meshSavePath = GetObjectMeshSaveFolder(meshSavePath, sourceObject.name);
                     EnsureDirectoryExists(meshSavePath);
                 }
 
@@ -812,11 +816,12 @@ namespace Plugins.AutoLODGenerator.Editor
                 folderPath = DefaultMeshSaveFolder;
             }
 
+            var baseName = lodGroupObject.name.Replace("_LODGroup", "");
+            folderPath = GetObjectMeshSaveFolder(folderPath, baseName);
             EnsureDirectoryExists(folderPath);
 
             var savedPaths = new List<string>();
             var lods = lodGroup.GetLODs();
-            var baseName = lodGroupObject.name.Replace("_LODGroup", "");
 
             for (var lodIndex = 0; lodIndex < lods.Length; lodIndex++)
             {
@@ -945,6 +950,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
             var paths = new List<string>();
             var baseName = result.SourceObject != null ? result.SourceObject.name : "Mesh";
+            folderPath = GetObjectMeshSaveFolder(folderPath, baseName);
 
             for (var i = 0; i < result.GeneratedMeshes.Length; i++)
             {
@@ -960,6 +966,44 @@ namespace Plugins.AutoLODGenerator.Editor
             }
 
             return paths.ToArray();
+        }
+
+        private static string GetObjectMeshSaveFolder(string rootFolderPath, string objectName)
+        {
+            if (string.IsNullOrEmpty(rootFolderPath))
+            {
+                rootFolderPath = DefaultMeshSaveFolder;
+            }
+
+            var folderName = SanitizeFolderName(objectName);
+            if (string.IsNullOrEmpty(folderName))
+            {
+                folderName = "Mesh";
+            }
+
+            var normalizedRoot = rootFolderPath.TrimEnd('/', '\\');
+            var lastSegment = Path.GetFileName(normalizedRoot);
+            if (string.Equals(lastSegment, folderName, StringComparison.OrdinalIgnoreCase))
+            {
+                return normalizedRoot;
+            }
+
+            return $"{normalizedRoot}/{folderName}";
+        }
+
+        private static string SanitizeFolderName(string folderName)
+        {
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                return "Mesh";
+            }
+
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                folderName = folderName.Replace(c, '_');
+            }
+
+            return folderName.Trim();
         }
 
         private static void EnsureDirectoryExists(string path)
