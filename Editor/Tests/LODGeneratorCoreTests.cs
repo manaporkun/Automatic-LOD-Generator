@@ -100,20 +100,28 @@ namespace Plugins.AutoLODGenerator.Editor.Tests
         [Test]
         public void ValidateForLODGeneration_WithChildMeshRenderer_ReturnsTrue()
         {
+            var mesh = new Mesh();
             var root = new GameObject("TestCompositeRoot");
-            var child = new GameObject("MeshChild");
-            child.transform.SetParent(root.transform);
-            child.AddComponent<MeshFilter>().sharedMesh = new Mesh();
-            child.AddComponent<MeshRenderer>();
 
-            var isValid = LODGeneratorCore.ValidateForLODGeneration(root, out var errorMessage);
-            var rendererType = LODGeneratorCore.GetMeshRendererType(root);
+            try
+            {
+                var child = new GameObject("MeshChild");
+                child.transform.SetParent(root.transform);
+                child.AddComponent<MeshFilter>().sharedMesh = mesh;
+                child.AddComponent<MeshRenderer>();
 
-            Assert.IsTrue(isValid);
-            Assert.IsNull(errorMessage);
-            Assert.AreEqual(MeshRendererType.Composite, rendererType);
+                var isValid = LODGeneratorCore.ValidateForLODGeneration(root, out var errorMessage);
+                var rendererType = LODGeneratorCore.GetMeshRendererType(root);
 
-            Object.DestroyImmediate(root);
+                Assert.IsTrue(isValid);
+                Assert.IsNull(errorMessage);
+                Assert.AreEqual(MeshRendererType.Composite, rendererType);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+            }
         }
 
         [Test]
@@ -158,23 +166,31 @@ namespace Plugins.AutoLODGenerator.Editor.Tests
             meshB.triangles = new[] { 0, 1, 2 };
 
             var root = new GameObject("TestCompositeStats");
-            var childA = new GameObject("MeshChildA");
-            childA.transform.SetParent(root.transform);
-            childA.AddComponent<MeshFilter>().sharedMesh = meshA;
-            childA.AddComponent<MeshRenderer>();
 
-            var childB = new GameObject("MeshChildB");
-            childB.transform.SetParent(root.transform);
-            childB.AddComponent<MeshFilter>().sharedMesh = meshB;
-            childB.AddComponent<MeshRenderer>();
+            try
+            {
+                var childA = new GameObject("MeshChildA");
+                childA.transform.SetParent(root.transform);
+                childA.AddComponent<MeshFilter>().sharedMesh = meshA;
+                childA.AddComponent<MeshRenderer>();
 
-            var (vertices, triangles, type) = LODGeneratorCore.GetMeshStatistics(root);
+                var childB = new GameObject("MeshChildB");
+                childB.transform.SetParent(root.transform);
+                childB.AddComponent<MeshFilter>().sharedMesh = meshB;
+                childB.AddComponent<MeshRenderer>();
 
-            Assert.AreEqual(9, vertices);
-            Assert.AreEqual(3, triangles);
-            Assert.AreEqual(MeshRendererType.Composite, type);
+                var (vertices, triangles, type) = LODGeneratorCore.GetMeshStatistics(root);
 
-            Object.DestroyImmediate(root);
+                Assert.AreEqual(9, vertices);
+                Assert.AreEqual(3, triangles);
+                Assert.AreEqual(MeshRendererType.Composite, type);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(meshA);
+                Object.DestroyImmediate(meshB);
+            }
         }
     }
 

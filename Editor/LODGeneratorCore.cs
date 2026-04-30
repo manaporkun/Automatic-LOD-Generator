@@ -145,7 +145,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
                     result.LODVertexCounts[i] = lodMesh.vertexCount;
                     result.LODTriangleCounts[i] = GetTriangleCount(lodMesh);
-                    result.GeneratedMeshes[i] = lodMesh;
 
                     // Save mesh to assets if requested
                     if (saveMeshesToAssets && i > 0)
@@ -156,9 +155,15 @@ namespace Plugins.AutoLODGenerator.Editor
                         // Reload the saved mesh
                         if (!string.IsNullOrEmpty(savedPath))
                         {
-                            lodMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                            var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                            if (savedMesh != null)
+                            {
+                                lodMesh = savedMesh;
+                            }
                         }
                     }
+
+                    result.GeneratedMeshes[i] = lodMesh;
 
                     // Create LOD GameObject based on renderer type
                     Renderer lodRenderer;
@@ -294,7 +299,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
                         result.LODVertexCounts[i] += lodMesh.vertexCount;
                         result.LODTriangleCounts[i] += GetTriangleCount(lodMesh);
-                        generatedMeshes.Add(lodMesh);
 
                         if (saveMeshesToAssets && i > 0)
                         {
@@ -303,9 +307,15 @@ namespace Plugins.AutoLODGenerator.Editor
                             if (!string.IsNullOrEmpty(savedPath))
                             {
                                 savedMeshPaths.Add(savedPath);
-                                lodMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                                var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                                if (savedMesh != null)
+                                {
+                                    lodMesh = savedMesh;
+                                }
                             }
                         }
+
+                        generatedMeshes.Add(lodMesh);
 
                         var targetTransform = EnsureMirroredTransform(
                             originalTransform,
@@ -484,7 +494,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
                 result.LODVertexCounts = new[] { simplifiedMesh.vertexCount };
                 result.LODTriangleCounts = new[] { GetTriangleCount(simplifiedMesh) };
-                result.GeneratedMeshes = new[] { simplifiedMesh };
 
                 // Save mesh to assets if requested
                 if (saveMeshToAssets)
@@ -502,9 +511,15 @@ namespace Plugins.AutoLODGenerator.Editor
                     // Reload the saved mesh
                     if (!string.IsNullOrEmpty(savedPath))
                     {
-                        simplifiedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                        var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                        if (savedMesh != null)
+                        {
+                            simplifiedMesh = savedMesh;
+                        }
                     }
                 }
+
+                result.GeneratedMeshes = new[] { simplifiedMesh };
 
                 // Create simplified GameObject
                 var simplifiedObject = new GameObject($"{sourceObject.name}{suffix}")
@@ -625,7 +640,6 @@ namespace Plugins.AutoLODGenerator.Editor
 
                     result.LODVertexCounts[0] += simplifiedMesh.vertexCount;
                     result.LODTriangleCounts[0] += GetTriangleCount(simplifiedMesh);
-                    generatedMeshes.Add(simplifiedMesh);
 
                     if (saveMeshToAssets)
                     {
@@ -634,9 +648,15 @@ namespace Plugins.AutoLODGenerator.Editor
                         if (!string.IsNullOrEmpty(savedPath))
                         {
                             savedMeshPaths.Add(savedPath);
-                            simplifiedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                            var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savedPath);
+                            if (savedMesh != null)
+                            {
+                                simplifiedMesh = savedMesh;
+                            }
                         }
                     }
+
+                    generatedMeshes.Add(simplifiedMesh);
 
                     var targetTransform = EnsureMirroredTransform(
                         originalTransform,
@@ -955,7 +975,7 @@ namespace Plugins.AutoLODGenerator.Editor
             for (var i = 0; i < result.GeneratedMeshes.Length; i++)
             {
                 var mesh = result.GeneratedMeshes[i];
-                if (mesh != null && i > 0 && !AssetDatabase.Contains(mesh)) // Skip original/saved meshes
+                if (mesh != null && !AssetDatabase.Contains(mesh))
                 {
                     var path = SaveMeshAsset(mesh, folderPath, $"{baseName}_LOD{i}");
                     if (!string.IsNullOrEmpty(path))
@@ -1044,7 +1064,7 @@ namespace Plugins.AutoLODGenerator.Editor
                 return MeshRendererType.MeshRenderer;
             }
 
-            if (GetCompositeRendererData(gameObject).Count > 0)
+            if (HasCompositeRenderers(gameObject))
             {
                 return MeshRendererType.Composite;
             }
@@ -1135,6 +1155,29 @@ namespace Plugins.AutoLODGenerator.Editor
             public Mesh Mesh { get; set; }
             public Material[] Materials { get; set; }
             public MeshRendererType Type { get; set; }
+        }
+
+        private static bool HasCompositeRenderers(GameObject gameObject)
+        {
+            if (gameObject == null)
+                return false;
+
+            foreach (var renderer in gameObject.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer is SkinnedMeshRenderer skinnedRenderer)
+                {
+                    if (skinnedRenderer.sharedMesh != null)
+                        return true;
+                }
+                else if (renderer is MeshRenderer meshRenderer &&
+                         meshRenderer.TryGetComponent<MeshFilter>(out var meshFilter) &&
+                         meshFilter.sharedMesh != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static List<SourceRendererData> GetCompositeRendererData(GameObject gameObject)
