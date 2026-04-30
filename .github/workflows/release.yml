@@ -15,6 +15,9 @@ jobs:
     name: Tag Current Version
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag_created: ${{ steps.tag.outputs.created }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate version consistency
+        id: version
         run: |
           PKG_VERSION=$(jq -r '.version' package.json)
           CHANGELOG_FIRST=""
@@ -47,13 +51,16 @@ jobs:
           fi
 
           echo "VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag when missing
+        id: tag
         run: |
           TAG="v${VERSION}"
 
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
             echo "Tag ${TAG} already exists; skipping."
+            echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -61,15 +68,19 @@ jobs:
           git push origin "${TAG}" || {
             if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
               echo "Tag ${TAG} already exists after push attempt; skipping."
+              echo "created=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "::error::Failed to push tag ${TAG}."
             exit 1
           }
+          echo "created=true" >> "$GITHUB_OUTPUT"
 
   release-default-branch:
     name: Create Release (Default Branch)
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: >
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      needs.tag-default-branch.outputs.tag_created == 'true'
     needs: tag-default-branch
     runs-on: ubuntu-latest
     steps:
