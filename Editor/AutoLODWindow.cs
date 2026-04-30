@@ -879,7 +879,7 @@ namespace Plugins.AutoLODGenerator.Editor
 
                 EditorGUILayout.EndScrollView();
 
-                EditorGUILayout.LabelField("S = Skinned, M = Static Mesh", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("S = Skinned, M = Static Mesh, C = Composite", EditorStyles.miniLabel);
             }
 
             // Selection helpers
