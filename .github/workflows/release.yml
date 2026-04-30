@@ -10,109 +10,115 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  tag-default-branch:
-    name: Tag Current Version
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+  auto-release-default-branch:
+    name: Auto Release (Default Branch)
+    if: >
+      github.event_name == 'push' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip release]') &&
+      !startsWith(github.event.head_commit.message, 'chore: release v')
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag_created: ${{ steps.tag.outputs.created }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Validate version consistency
+      - name: Calculate next patch version
         id: version
         run: |
-          PKG_VERSION=$(jq -r '.version' package.json)
-          CHANGELOG_FIRST=""
-
-          while IFS= read -r line || [ -n "$line" ]; do
-            if [[ "$line" =~ ^##[[:space:]]+\[([^]]+)\] ]]; then
-              ver="${BASH_REMATCH[1]}"
-              if [ "$ver" != "Unreleased" ]; then
-                CHANGELOG_FIRST="$ver"
-                break
-              fi
-            fi
-          done < CHANGELOG.md
-
-          if [ -z "$CHANGELOG_FIRST" ]; then
-            echo "::error::No version heading (## [x.y.z]) found in CHANGELOG.md"
+          CURRENT=$(jq -r '.version' package.json)
+          if [[ ! "$CURRENT" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::package.json version must be a plain semver version (x.y.z), got ${CURRENT}"
             exit 1
           fi
 
-          if [ "$CHANGELOG_FIRST" != "$PKG_VERSION" ]; then
-            echo "::error::package.json version ($PKG_VERSION) must match the first non-Unreleased section in CHANGELOG.md ($CHANGELOG_FIRST)."
-            exit 1
-          fi
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+          PATCH=$((PATCH + 1))
 
-          echo "VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
-          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          while git ls-remote --exit-code --tags origin "refs/tags/v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1; do
+            PATCH=$((PATCH + 1))
+          done
 
-      - name: Create and push tag when missing
-        id: tag
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          PREVIOUS_TAG=$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || true)
+
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> "$GITHUB_ENV"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Next release: v${VERSION}"
+
+      - name: Build release notes
         run: |
-          TAG="v${VERSION}"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists; skipping."
-            echo "created=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ -n "$PREVIOUS_TAG" ]; then
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          else
+            RANGE="HEAD"
           fi
 
-          git tag "${TAG}" "${GITHUB_SHA}"
-          git push origin "${TAG}" || {
-            if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-              echo "Tag ${TAG} already exists after push attempt; skipping."
-              echo "created=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "::error::Failed to push tag ${TAG}."
-            exit 1
-          }
-          echo "created=true" >> "$GITHUB_OUTPUT"
+          git log "$RANGE" --no-merges --reverse --pretty=format:'- %s' > release_notes.raw
+          grep -Ev '^- chore: (release v|bump version to )' release_notes.raw > release_notes.filtered || true
 
-  release-default-branch:
-    name: Create Release (Default Branch)
-    if: >
-      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
-      needs.tag-default-branch.outputs.tag_created == 'true'
-    needs: tag-default-branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          if [ ! -s release_notes.filtered ]; then
+            echo "- Maintenance release" > release_notes.md
+          else
+            cp release_notes.filtered release_notes.md
+          fi
 
-      - name: Read version from package.json
+      - name: Update package and changelog
         run: |
-          PKG_VERSION=$(jq -r '.version' package.json)
-          echo "VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+          DATE=$(date +%Y-%m-%d)
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+          mv package.json.tmp package.json
 
-      - name: Extract changelog for this version
-        run: |
-          VERSION="$VERSION"
-          CHANGELOG=$(awk -v ver="$VERSION" '
-            $0 ~ "^## \\[" ver "\\]" { found=1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md)
-
-          if [ -z "$CHANGELOG" ]; then
-            echo "::error::No changelog section found for version $VERSION."
+          LINE=$(grep -n '^## \[' CHANGELOG.md | head -1 | cut -d: -f1) || true
+          if [ -z "$LINE" ]; then
+            echo "::error::No existing '## [version]' section found in CHANGELOG.md"
             exit 1
           fi
 
-          echo "$CHANGELOG" > release_notes.md
+          {
+            head -n "$((LINE - 1))" CHANGELOG.md
+            printf '## [%s] - %s\n\n' "$VERSION" "$DATE"
+            printf '### Changed\n'
+            cat release_notes.md
+            printf '\n\n'
+            tail -n "+$LINE" CHANGELOG.md
+          } > CHANGELOG.md.new
+          mv CHANGELOG.md.new CHANGELOG.md
+
+      - name: Commit, tag, and push release
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json CHANGELOG.md
+
+          if git diff --cached --quiet; then
+            echo "::error::No release changes were generated."
+            exit 1
+          fi
+
+          git commit -m "chore: release v${VERSION} [skip ci]"
+          git tag "v${VERSION}"
+          git push origin "HEAD:refs/heads/${DEFAULT_BRANCH}" "refs/tags/v${VERSION}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ env.VERSION }}"
-          name: "v${{ env.VERSION }}"
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "v${{ steps.version.outputs.version }}"
           body_path: release_notes.md
 
   release-tag-push:
