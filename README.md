@@ -45,6 +45,7 @@ Transform complex 3D meshes into optimized LOD groups with just a few clicks. Pe
 ### Mesh Support
 - **Static Meshes** - Full support for MeshFilter + MeshRenderer objects
 - **Skinned Meshes** - Full support for SkinnedMeshRenderer (animated characters)
+- **Composite Models** - Supports imported prefab/model roots with mesh renderers on child objects
 - **Save to Assets** - Export generated meshes as reusable .asset files
 
 ### Workflow
@@ -213,7 +214,7 @@ Enable **Save Meshes to Assets** in the Save Options section to:
 - Export generated LOD meshes as `.asset` files
 - Reuse meshes across multiple prefabs
 - Reduce scene file size
-- **Default save location**: `Assets/GeneratedLODs/`
+- **Default save location**: `Assets/GeneratedLODs/<ModelName>/`
 
 ### Skinned Mesh Support
 
@@ -369,7 +370,7 @@ A: Yes, if you enable "Save Meshes to Assets", the meshes are saved as `.asset` 
 
 **Q: What mesh formats are supported?**
 
-A: Any mesh that Unity can import (FBX, OBJ, DAE, etc.) as long as it's a valid mesh with triangles.
+A: Any mesh that Unity can import (FBX, OBJ, DAE, etc.) as long as it's a valid mesh with triangles. Imported prefab roots are supported when their child objects contain valid MeshRenderer or SkinnedMeshRenderer components, which covers common GLB/glTF and USDZ workflows after an appropriate Unity importer has converted the file into GameObjects.
 
 ---
 
