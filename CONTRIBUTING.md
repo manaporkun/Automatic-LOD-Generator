@@ -166,16 +166,18 @@ Explain the problem this commit solves and why.
 
 ## Releasing
 
-Releases are automated with GitHub Actions once a new version lands on the default branch.
+Releases are fully automated with GitHub Actions after changes land on the default branch.
 
 ### Maintainer flow
 
-1. **Changelog and version** — The version in `package.json` must match the **first** non-`[Unreleased]` section heading in `CHANGELOG.md` (for example `## [2.2.0]`). CI enforces this on every push and pull request.
-2. **Merge to default branch** — Once that version change is merged, the **Release** workflow checks whether `v<package.json version>` exists. If it does not, the workflow creates and pushes the tag automatically.
-3. **GitHub Release** — When the **Release** workflow creates a new tag, it extracts that version’s changelog section and publishes the GitHub Release in the same run. If the tag already exists, the release job is skipped.
-4. **Optional helper** — You can still run **Version Bump** (Actions → *Version Bump* → Run workflow) to bump patch/minor/major, scaffold changelog headings, push the bump commit/tag, and publish the GitHub Release in one action.
+1. **Merge to default branch** — A normal push or merged pull request to `main` triggers the **Release** workflow.
+2. **Automatic patch release** — The workflow bumps `package.json` to the next available patch version, prepends a `CHANGELOG.md` entry from commits since the previous `v*` tag, commits the release bump, creates the matching tag, and publishes the GitHub Release.
+3. **Skip when needed** — Include `[skip release]` in the commit message to skip the automatic release workflow for that push.
+4. **Optional explicit bump** — You can still run **Version Bump** (Actions → *Version Bump* → Run workflow) when you need a specific patch/minor/major bump. That workflow creates the bump commit, tag, changelog section, and GitHub Release itself.
 
-If `CHANGELOG.md` is edited by hand, update `package.json` to the same version so CI stays green. Automation requires `GITHUB_TOKEN` to have `contents: write` so tags and releases can be created.
+Manual `v*` tag pushes by maintainers still publish releases. Automated tag pushes from release workflows are skipped by the tag-push release job because the originating workflow publishes the release directly.
+
+Automation requires `GITHUB_TOKEN` to have `contents: write` and the default branch to allow the workflow token to push the release commit and tag.
 
 ## Reporting Bugs
 
