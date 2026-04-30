@@ -75,3 +75,26 @@ jobs:
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
           git tag "v${{ steps.version.outputs.new }}"
           git push origin "HEAD:refs/heads/${DEFAULT_BRANCH}" --tags
+
+      - name: Extract changelog for new version
+        run: |
+          VERSION="${{ steps.version.outputs.new }}"
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$CHANGELOG" ]; then
+            echo "::error::No changelog section found for version $VERSION."
+            exit 1
+          fi
+
+          echo "$CHANGELOG" > release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.new }}"
+          name: "v${{ steps.version.outputs.new }}"
+          body_path: release_notes.md
